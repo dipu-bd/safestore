@@ -1,4 +1,4 @@
-package com.example.safestore;
+package org.bitanon.safestore;
 
 import android.os.Bundle;
 import io.flutter.app.FlutterActivity;
