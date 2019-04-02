@@ -22,13 +22,20 @@ dependencies:
 
   cupertino_icons: ^0.1.2 # https://pub.dartlang.org/packages/cupertino_icons
   uuid: ^2.0.0 # https://pub.dartlang.org/packages/uuid
-  intl: ^0.15.7 # https://pub.dartlang.org/packages/intl
   fixnum: ^0.10.9 # https://pub.dartlang.org/packages/fixnum
   protobuf: ^0.13.4 # https://pub.dartlang.org/packages/protobuf
   grpc: ^1.0.1 # https://pub.dartlang.org/packages/grpc
   rxdart: ^0.21.0 # https://pub.dartlang.org/packages/rxdart
   quiver_hashcode: ^2.0.0 # https://pub.dartlang.org/packages/quiver_hashcode
+  pointycastle: ^1.0.1 # https://pub.dartlang.org/packages/pointycastle
+  path_provider: ^0.5.0 # https://pub.dartlang.org/packages/path_provider
+  shared_preferences: ^0.5.1 # https://pub.dartlang.org/packages/shared_preferences
+
+  # experimental
+  catcher: ^0.1.4 # https://pub.dartlang.org/packages/catcher
+  intl: ^0.15.7 # https://pub.dartlang.org/packages/intl
   photo_view: ^0.2.2 # https://pub.dartlang.org/packages/photo_view
+  local_auth: ^0.4.0 # https://pub.dartlang.org/packages/local_auth
 
 dev_dependencies:
   flutter_test:
@@ -44,9 +51,9 @@ flutter:
   # the material Icons class.
   uses-material-design: true
   # To add assets to your application, add an assets section, like this:
-  # assets:
-  #  - images/a_dot_burr.jpeg
-  #  - images/a_dot_ham.jpeg
+  assets:
+    - assets/logo.png
+    - assets/metal-back.jpg
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.io/assets-and-images/#resolution-aware.
   # For details regarding adding assets from package dependencies, see
