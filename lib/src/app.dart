@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:catcher/catcher_plugin.dart';
 import 'package:safestore/src/blocs/user_bloc.dart';
 import 'package:safestore/src/blocs/bloc_provider.dart';
 import 'package:safestore/src/widgets/screens/home.dart';
@@ -15,16 +16,17 @@ class App extends StatelessWidget {
   Widget app() {
     return MaterialApp(
       title: 'Safe Store',
+      navigatorKey: Catcher.navigatorKey,
       theme: ThemeData(
         primarySwatch: Colors.orange,
       ),
       onGenerateRoute: (settings) {
-        return HomePage().buildRoute(settings) ?? buildUknownRoute(settings);
+        return HomePage().buildRoute(settings) ?? buildUnknownRoute(settings);
       },
     );
   }
 
-  MaterialPageRoute buildUknownRoute(RouteSettings settings) {
+  MaterialPageRoute buildUnknownRoute(RouteSettings settings) {
     return MaterialPageRoute(
       settings: settings,
       builder: (_) {

@@ -6,17 +6,17 @@ class HomePage extends Screen {
   bool matchRoute(String route) => route == '/';
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, RouteSettings route) {
     return Scaffold(
       body: buildBody(),
       appBar: AppBar(
-        title: Text('SafeStore'),
+        title: Text('Safe Store'),
         actions: <Widget>[
           IconButton(
             icon: Icon(Icons.lock),
-            color: Colors.red,
             onPressed: () {
               // TODO: logout from session
+              print('Not yet implemented');
             },
           )
         ],
@@ -25,6 +25,8 @@ class HomePage extends Screen {
   }
 
   Widget buildBody() {
-    return Container();
+    return Center(
+      child: Text('Under construction'),
+    );
   }
 }
