@@ -27,8 +27,6 @@ dependencies:
   grpc: ^1.0.1 # https://pub.dartlang.org/packages/grpc
   rxdart: ^0.21.0 # https://pub.dartlang.org/packages/rxdart
   quiver_hashcode: ^2.0.0 # https://pub.dartlang.org/packages/quiver_hashcode
-  pointycastle: ^1.0.1 # https://pub.dartlang.org/packages/pointycastle
-  path_provider: ^0.5.0 # https://pub.dartlang.org/packages/path_provider
   shared_preferences: ^0.5.1 # https://pub.dartlang.org/packages/shared_preferences
 
   # experimental
@@ -36,6 +34,9 @@ dependencies:
   intl: ^0.15.7 # https://pub.dartlang.org/packages/intl
   photo_view: ^0.2.2 # https://pub.dartlang.org/packages/photo_view
   local_auth: ^0.4.0 # https://pub.dartlang.org/packages/local_auth
+  path_provider: ^0.5.0 # https://pub.dartlang.org/packages/path_provider
+  crypto: ^2.0.6 # https://pub.dartlang.org/packages/crypto
+  pointycastle: ^1.0.1 # https://pub.dartlang.org/packages/pointycastle
 
 dev_dependencies:
   flutter_test:

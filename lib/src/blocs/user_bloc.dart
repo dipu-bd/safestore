@@ -37,7 +37,13 @@ class UserBloc extends BlocBase {
   }
 
   Future<bool> signup(String password) async {
-    //
+    try {
+      final user = await StorageService.instance.createNewUser(password);
+      _user.sink.add(user);
+      return true;
+    } catch (err) {
+      print('<!> signup($password): $err');
+    }
     return false;
   }
 }
