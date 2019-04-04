@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:safestore/src/blocs/user_bloc.dart';
 import '../commons/screen.dart';
 
 class HomePage extends Screen {
@@ -15,8 +16,7 @@ class HomePage extends Screen {
           IconButton(
             icon: Icon(Icons.lock),
             onPressed: () {
-              // TODO: logout from session
-              print('Not yet implemented');
+              UserBloc.of(context).signout();
             },
           )
         ],

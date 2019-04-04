@@ -30,12 +30,10 @@ class _PasswordBoxState extends State<PasswordBox> {
       obscureText: obscured,
       keyboardType: TextInputType.text,
       textInputAction: TextInputAction.next,
-      keyboardAppearance: Brightness.dark,
       onSubmitted: widget.onSubmit,
       onChanged: widget.onChange,
       autofocus: widget.autofocus,
       style: TextStyle(
-        color: Colors.white,
         fontSize: 26.0,
         fontFamily: 'monospace',
         fontWeight: FontWeight.bold,
@@ -47,42 +45,24 @@ class _PasswordBoxState extends State<PasswordBox> {
   InputDecoration buildInputDecoration() {
     return InputDecoration(
       filled: true,
-      fillColor: Color.fromARGB(240, 0, 0, 0),
-      prefixIcon: Icon(
-        Icons.lock,
-        color: Colors.amber,
+      fillColor: Colors.white.withOpacity(0.95),
+      contentPadding: EdgeInsets.symmetric(vertical: 20.0),
+      prefixIcon: Icon(Icons.lock),
+      suffixIcon: GestureDetector(
+        onTap: () {
+          obscured = !obscured;
+          if (mounted) setState(() {});
+        },
+        child: Icon(obscured ? Icons.visibility : Icons.visibility_off),
       ),
-      suffix: SizedBox(
-        width: 40.0,
-        height: 40.0,
-        child: IconButton(
-          icon: Icon(
-            obscured ? Icons.visibility : Icons.visibility_off,
-          ),
-          color: obscured ? Colors.amberAccent : Colors.grey,
-          onPressed: () {
-            obscured = !obscured;
-            if (mounted) setState(() {});
-          },
-        ),
-      ),
-      hintText: widget.hintText ?? 'Enter Password',
+      hintText: widget.hintText ?? 'Password',
       hintStyle: TextStyle(
-        color: Colors.white,
-        fontWeight: FontWeight.w500,
-        fontSize: 24.0,
+        fontWeight: FontWeight.w300,
+        fontSize: 23.0,
       ),
-      counterStyle: TextStyle(
-        color: Colors.white,
-        fontSize: 16.0,
-        fontWeight: FontWeight.bold,
-      ),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10.0),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10.0),
-        borderSide: BorderSide(width: 2.0, color: Colors.white24),
+      border: UnderlineInputBorder(
+        borderSide: BorderSide(width: 2.0),
+        borderRadius: BorderRadius.circular(5.0),
       ),
     );
   }

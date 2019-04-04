@@ -22,28 +22,30 @@ class UserBloc extends BlocBase {
 
   ValueObservable<User> get user => _user.stream;
 
-  Future<bool> login(String password) async {
+  Future<void> signin(String password) async {
     try {
       final user = await StorageService.instance.checkPassword(password);
       if (user == null) {
         throw Exception('Retrieved user can not be null');
       }
       _user.sink.add(user);
-      return true;
     } catch (err) {
       print('<!> login($password): $err');
+      throw Exception('Failed to login\n$err');
     }
-    return false;
   }
 
-  Future<bool> signup(String password) async {
+  Future<void> signup(String password) async {
     try {
       final user = await StorageService.instance.createNewUser(password);
       _user.sink.add(user);
-      return true;
     } catch (err) {
       print('<!> signup($password): $err');
+      throw Exception('Failed to create new user\n$err');
     }
-    return false;
+  }
+
+  void signout() {
+    _user.sink.add(null);
   }
 }

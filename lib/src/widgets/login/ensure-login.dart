@@ -18,6 +18,12 @@ class _EnsureLoginState extends State<EnsureLogin> {
   bool requireSignup = false;
   String password, repeatedPassword;
 
+  void reset() {
+    password = null;
+    repeatedPassword = null;
+    requireSignup = false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final userBloc = UserBloc.of(context);
@@ -35,7 +41,6 @@ class _EnsureLoginState extends State<EnsureLogin> {
 
   Widget buildProgress() {
     return Scaffold(
-      backgroundColor: Colors.grey[200],
       body: Center(
         child: CircularProgressIndicator(),
       ),
@@ -58,10 +63,13 @@ class _EnsureLoginState extends State<EnsureLogin> {
         padding: EdgeInsets.all(15.0),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('./assets/metal-back.jpg'),
-            fit: BoxFit.cover,
-            alignment: Alignment.center,
+          gradient: LinearGradient(
+            colors: [
+              Colors.blueGrey[50],
+              Colors.teal[200],
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
         ),
       ),
@@ -87,29 +95,45 @@ class _EnsureLoginState extends State<EnsureLogin> {
   }
 
   void checkPassword() async {
+    if (password == null || password == '') {
+      return showAlertDialog(
+        title: 'Input Error',
+        message: 'Password should not be empty',
+      );
+    }
     if (requireSignup) {
       if (password != repeatedPassword) {
-        print('$password != $repeatedPassword');
-        showPasswordMismatch();
-        return;
+        return showAlertDialog(
+          title: 'Input Error',
+          message: 'The passwords you entered does not match',
+        );
       }
     }
-    if (requireSignup) {
-      await UserBloc.of(context).signup(password);
-    } else {
-      final res = await UserBloc.of(context).login(password);
-      requireSignup = !res;
+    try {
+      if (requireSignup) {
+        await UserBloc.of(context).signup(password);
+      } else {
+        await UserBloc.of(context).signin(password);
+      }
+      this.reset();
+    } catch (err) {
+      requireSignup = true;
+      showAlertDialog(
+        title: 'Error',
+        message: err.toString(),
+      );
+    } finally {
+      if (mounted) setState(() {});
     }
-    if (mounted) setState(() {});
   }
 
-  void showPasswordMismatch() {
+  void showAlertDialog({String title, String message}) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Password Error'),
-          content: const Text('The passwords you entered does not match'),
+          title: Text(title),
+          content: Text(message),
           actions: <Widget>[
             FlatButton(
               child: Text('Retry'),

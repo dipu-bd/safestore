@@ -28,11 +28,12 @@ class StorageService {
     if (password == null || password.isEmpty) {
       throw Exception('Password should not be empty');
     }
-    final user = User(password);
+    final hash = CryptoService.instance.getSecureHash(password);
+    String workdir = await getWorkDir(hash);
+    final user = User(password, workdir);
     final jsonStr = json.encode(user.toJson());
     final base64 = CryptoService.instance.encryptString(password, jsonStr);
     final preference = await SharedPreferences.getInstance();
-    final hash = CryptoService.instance.getSecureHash(password);
     final success = await preference.setString(hash, base64);
     if (!success) throw Exception('Failed to update preference');
     return user;
@@ -47,6 +48,36 @@ class StorageService {
       final dir = await getExternalStorageDirectory();
       storage = dir.absolute.path;
     }
+    key = key.substring(16) + key.substring(0, 16);
+    key = key.replaceAll('/', '.');
+    key = key.replaceAll('=', '_');
+    storage += '/SafeStore/$key';
     return storage;
+  }
+
+  List<String> fileList(User user) {
+    try {
+      final meta = File(user.workdir + '/r');
+      final data = meta.readAsBytesSync();
+      final encrypted = Encrypted.fromList(data);
+      final jsonStr = user.encrypter.decrypt(encrypted);
+      return json.decode(jsonStr);
+    } catch (err) {
+      print('<!> fileList: $err');
+      return [];
+    }
+  }
+
+  void saveFileList(User user, List<String> files) {
+    try {
+      final jsonStr = json.encode(files);
+      final data = user.encrypter.encrypt(jsonStr).bytes.toList();
+      final meta = File(user.workdir + '/r');
+      meta.createSync(recursive: true);
+      meta.writeAsBytesSync(data);
+    } catch (err) {
+      print('<!> saveFileList: ${files.length}');
+      throw Exception('Failed to save file list');
+    }
   }
 }

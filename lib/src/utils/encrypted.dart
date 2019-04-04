@@ -20,6 +20,10 @@ class Encrypted {
               .toList(),
         );
 
+  /// Creates an Encrypted object from a Iterable byte list.
+  Encrypted.fromList(Iterable<int> data)
+      : _bytes = Uint8List.fromList(data.toList());
+
   /// Creates an Encrypted object from a Base64 string.
   Encrypted.fromBase64(String encoded)
       : _bytes = convert.base64.decode(encoded);

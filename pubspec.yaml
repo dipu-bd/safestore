@@ -25,18 +25,16 @@ dependencies:
   fixnum: ^0.10.9 # https://pub.dartlang.org/packages/fixnum
   protobuf: ^0.13.4 # https://pub.dartlang.org/packages/protobuf
   grpc: ^1.0.1 # https://pub.dartlang.org/packages/grpc
+  catcher: ^0.1.4 # https://pub.dartlang.org/packages/catcher
   rxdart: ^0.21.0 # https://pub.dartlang.org/packages/rxdart
-  quiver_hashcode: ^2.0.0 # https://pub.dartlang.org/packages/quiver_hashcode
   shared_preferences: ^0.5.1 # https://pub.dartlang.org/packages/shared_preferences
+  pointycastle: ^1.0.1 # https://pub.dartlang.org/packages/pointycastle
 
   # experimental
-  catcher: ^0.1.4 # https://pub.dartlang.org/packages/catcher
   intl: ^0.15.7 # https://pub.dartlang.org/packages/intl
   photo_view: ^0.2.2 # https://pub.dartlang.org/packages/photo_view
   local_auth: ^0.4.0 # https://pub.dartlang.org/packages/local_auth
   path_provider: ^0.5.0 # https://pub.dartlang.org/packages/path_provider
-  crypto: ^2.0.6 # https://pub.dartlang.org/packages/crypto
-  pointycastle: ^1.0.1 # https://pub.dartlang.org/packages/pointycastle
 
 dev_dependencies:
   flutter_test:
