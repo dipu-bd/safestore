@@ -1,0 +1,59 @@
+{
+  "project_info": {
+    "project_number": "461882774080",
+    "firebase_url": "https://safestore-app.firebaseio.com",
+    "project_id": "safestore-app",
+    "storage_bucket": "safestore-app.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:461882774080:android:4ca4472ceb17b4457a45a5",
+        "android_client_info": {
+          "package_name": "org.bitanon.safestore"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "461882774080-g6g8cvb3e07rh7kulm6qlg5fqbu0p2om.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "org.bitanon.safestore",
+            "certificate_hash": "b981020318d04feb6d78bb403d4e8201f121ac72"
+          }
+        },
+        {
+          "client_id": "461882774080-hrmedm60nm0nmvuaha37lvrg4r99qj6g.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "org.bitanon.safestore",
+            "certificate_hash": "8b4fd5b2dbed50a9b38ac743aae3c322363fb550"
+          }
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBIvVari9rfD_zsa7ZOWAmWenXivaI1ITU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "461882774080-geio4ckb43gr5dkoaprm8ut7i7imm0gp.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "461882774080-ul2krt5a2ing6i1tjrsankcdnbuf0qkm.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "org.bitanon.safestore"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
