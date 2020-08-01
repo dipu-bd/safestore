@@ -33,13 +33,21 @@ class GoogleDrive {
   ];
   static final rootFolderName = 'Safestore';
 
+  GoogleSignInAccount _googleUser;
   Future<DriveApi> _driveApiFuture;
 
+  Future<GoogleSignInAccount> signIn() async {
+    if (_googleUser == null) {
+      final googleSignIn = GoogleSignIn.standard(scopes: authScopes);
+      log('Signing in to google...', name: '$this');
+      _googleUser = await googleSignIn.signIn();
+      log('Email: ${_googleUser.email}', name: '$this');
+    }
+    return _googleUser;
+  }
+
   Future<DriveApi> initDrive() async {
-    final googleSignIn = GoogleSignIn.standard(scopes: authScopes);
-    log('Signing in to google...', name: '$this');
-    final googleUser = await googleSignIn.signIn();
-    log('Email: ${googleUser.email}', name: '$this');
+    final googleUser = await signIn();
     final authHeaders = await googleUser.authHeaders;
     log('Header: $authHeaders', name: '$this');
     final client = GoogleHttpClient(authHeaders);
