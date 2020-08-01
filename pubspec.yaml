@@ -30,8 +30,6 @@ dependencies:
   pointycastle: ^1.0.2
   google_fonts: ^1.1.0
   googleapis: ^0.55.0
-  googleapis_auth: ^0.2.12
-  firebase_auth: ^0.16.1
   google_sign_in: ^4.5.1
   qr_flutter: ^3.2.0
 
