@@ -3,7 +3,7 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:safestore/src/models/note.dart';
-import 'package:safestore/src/services/secure_storage.dart';
+import 'package:safestore/src/services/storage.dart';
 
 enum NoteEvent {
   notify,
@@ -26,6 +26,8 @@ class NoteState {
 }
 
 class NoteBloc extends Bloc<NoteEvent, NoteState> {
+  LocalStorage storage;
+
   NoteBloc() : super(NoteState());
 
   static NoteBloc of(BuildContext context) =>
@@ -51,13 +53,18 @@ class NoteBloc extends Bloc<NoteEvent, NoteState> {
     add(NoteEvent.purge);
   }
 
+  Future<void> init(LocalStorage storage) {
+    this.storage = storage;
+    return loadNotes();
+  }
+
   Future<void> loadNotes() async {
     try {
       state.loading = true;
       state.loadError = null;
       notify();
 
-      final all = await SecureStorage().listAll();
+      final all = await storage.listAll();
       state.notes = all.map((e) => Note()..fromJson(e)).toList();
     } catch (err, stack) {
       log('$err', stackTrace: stack, name: '$this');
@@ -74,7 +81,7 @@ class NoteBloc extends Bloc<NoteEvent, NoteState> {
       state.saveError = null;
       notify();
 
-      await SecureStorage().save(note.toJson());
+      await storage.save(note.toJson());
       state.notes ??= [];
       state.notes.removeWhere((e) => e.id == note.id);
       state.notes.add(note);
@@ -89,7 +96,7 @@ class NoteBloc extends Bloc<NoteEvent, NoteState> {
 
   Future<void> deleteNote(Note note) async {
     try {
-      await SecureStorage().delete(note.id);
+      await storage.delete(note.id);
       state.notes?.removeWhere((e) => e.id == note.id);
     } catch (err, stack) {
       log('$err', stackTrace: stack, name: '$this');

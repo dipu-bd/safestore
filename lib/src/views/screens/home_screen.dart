@@ -11,11 +11,6 @@ import 'package:safestore/src/views/screens/note_edit.dart';
 class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final state = NoteBloc.of(context).state;
-    final store = StoreBloc.of(context).state;
-    if (!state.loading && state.notes == null) {
-      NoteBloc.of(context).loadNotes();
-    }
     return SafeArea(
       top: false,
       child: Scaffold(
@@ -23,11 +18,7 @@ class HomeScreen extends StatelessWidget {
         drawer: buildDrawer(context),
         floatingActionButton: buildFAB(context),
         body: RefreshIndicator(
-          onRefresh: () async {
-            if (state.loading || store.syncing) return;
-            await StoreBloc.of(context).sync();
-            await NoteBloc.of(context).loadNotes();
-          },
+          onRefresh: () => handleRefresh(context),
           child: SingleChildScrollView(
             child: Container(
               padding: EdgeInsets.all(10),
@@ -52,7 +43,7 @@ class HomeScreen extends StatelessWidget {
       actions: <Widget>[
         IconButton(
           icon: Icon(Icons.sync),
-          onPressed: () => StoreBloc.of(context).sync(),
+          onPressed: () => handleRefresh(context),
         ),
       ],
       bottom: store.syncing
@@ -177,18 +168,28 @@ class HomeScreen extends StatelessWidget {
                 note.title,
                 style: GoogleFonts.delius(fontSize: 20, color: Colors.amber),
               ),
-              subtitle: Text(
-                note.body.length > 500
-                    ? note.body.substring(0, 500) + '...'
-                    : note.body,
-                style: GoogleFonts.delius(fontSize: 14),
-              ),
+              subtitle: note.body.isNotEmpty
+                  ? Text(
+                      note.body.length > 500
+                          ? note.body.substring(0, 500) + '...'
+                          : note.body,
+                      style: GoogleFonts.delius(fontSize: 14),
+                    )
+                  : null,
               onTap: () => NoteEditDialog.show(context, note),
             ),
           );
         }),
       ],
     );
+  }
+
+  Future<void> handleRefresh(BuildContext context) async {
+    final state = NoteBloc.of(context).state;
+    final store = StoreBloc.of(context).state;
+    if (state.loading || store.syncing) return;
+    await StoreBloc.of(context).sync();
+    await NoteBloc.of(context).loadNotes();
   }
 
   void handleLogout(BuildContext context) {

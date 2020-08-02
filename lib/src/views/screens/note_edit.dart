@@ -60,14 +60,7 @@ class NoteEditDialog extends StatelessWidget {
       builder: (context, state) {
         return FloatingActionButton(
           child: state.saving ? CircularProgressIndicator() : Icon(Icons.save),
-          onPressed: () async {
-            if (state.saving) return;
-            note.title = titleController.text;
-            note.body = bodyController.text;
-            await NoteBloc.of(context).saveNote(note);
-            StoreBloc.of(context).sync(); // do a sync
-            Navigator.of(context).pop();
-          },
+          onPressed: () => handleSubmit(context),
         );
       },
     );
@@ -111,6 +104,33 @@ class NoteEditDialog extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  void handleSubmit(BuildContext context) async {
+    // validity check
+    if (titleController.text.isEmpty) {
+      return showDialog(
+        context: context,
+        child: AlertDialog(
+          title: Text('Invalid Note'),
+          content: Text('Note title can not be empty'),
+          actions: <Widget>[
+            FlatButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Close'),
+            ),
+          ],
+        ),
+      );
+    }
+    // save and close
+    final state = NoteBloc.of(context).state;
+    if (state.saving) return;
+    note.title = titleController.text;
+    note.body = bodyController.text;
+    await NoteBloc.of(context).saveNote(note);
+    StoreBloc.of(context).sync(); // do a sync
+    Navigator.of(context).pop();
   }
 
   void handleNoteDelete(BuildContext context) async {

@@ -7,7 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:safestore/src/services/compress.dart';
 import 'package:safestore/src/services/crypto.dart';
 import 'package:safestore/src/services/google_drive.dart';
-import 'package:safestore/src/services/secure_storage.dart';
+import 'package:safestore/src/services/storage.dart';
 
 enum StoreEvent {
   notify,
@@ -21,6 +21,7 @@ class StoreState {
   String passwordError;
   bool binFound = false;
 
+  LocalStorage storage;
   bool syncing = false;
   String syncError;
   int lastSync = 0;
@@ -70,6 +71,7 @@ class StoreBloc extends Bloc<StoreEvent, StoreState> {
       final name = Crypto.makeHash(state.passwordHash, 5);
       state.binName = base64.encode(name).replaceAll('/', '_');
       log('Opening bin "${state.binName}"', name: '$this');
+      state.storage = LocalStorage(state.binName, state.passwordHash);
 
       await sync();
       if (state.syncError != null) {
@@ -105,19 +107,21 @@ class StoreBloc extends Bloc<StoreEvent, StoreState> {
       notify();
 
       // first try importing
-      final hasFile = await GoogleDrive().hasFile(state.binName);
-      if (hasFile) {
-        final online = await GoogleDrive().downloadFile(state.binName);
+      var file = await GoogleDrive().getFile(state.binName);
+      if (file != null) {
+        final online = await GoogleDrive().downloadFile(file);
         final compressed = Crypto.decrypt(online, state.passwordHash);
         final text = Compression.uncompress(compressed); // after decrypt
-        await SecureStorage().import(text);
+        await state.storage.import(text);
+      } else {
+        file = await GoogleDrive().ensureFile(state.binName);
       }
 
       // now try to export
-      final data = await SecureStorage().export();
+      final data = await state.storage.export();
       final compressed = Compression.compress(data); // before encrypt
       final offline = Crypto.encrypt(compressed, state.passwordHash);
-      await GoogleDrive().uploadFile(state.binName, offline);
+      await GoogleDrive().uploadFile(file, offline);
     } catch (err, stack) {
       log('$err', stackTrace: stack, name: '$this');
       state.syncError = '$err';

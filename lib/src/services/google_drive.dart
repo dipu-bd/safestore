@@ -171,12 +171,15 @@ class GoogleDrive {
     }
   }
 
-  Future<List<int>> downloadFile(String filePath) async {
+  Future<List<int>> downloadFileByPath(String filePath) async {
     final file = await getFile(filePath);
     if (file == null) {
       throw new Exception('No such file');
     }
+    return downloadFile(file);
+  }
 
+  Future<List<int>> downloadFile(File file) async {
     final drive = await getDrive();
     final Media media = await drive.files.get(
       file.id,
@@ -194,30 +197,30 @@ class GoogleDrive {
     return sink;
   }
 
-  Future<File> uploadFile(String filePath, Uint8List data,
+  Future<File> uploadFileByPath(String filePath, Uint8List data,
       [bool tolerant = false]) async {
-    try {
-      final drive = await getDrive();
-      final original = await ensureFile(filePath);
+    final file = await ensureFile(filePath);
+    return await uploadFile(file, data, tolerant);
+  }
 
-      final req = File();
-      req.name = original.name;
-      req.parents = original.parents;
-      req.mimeType = 'application/x-binary';
-      req.description = original.description;
+  Future<File> uploadFile(File dest, Uint8List data,
+      [bool tolerant = false]) async {
+    final drive = await getDrive();
 
-      log('Uploading ${data.length} bytes to "${req.description ?? req.name}"',
-          name: '$this');
-      final file = await drive.files.update(
-        req,
-        original.id,
-        uploadMedia: Media(Stream.value(data.toList()), data.length),
-      );
-      return file;
-    } catch (err) {
-      if (tolerant) return null;
-      throw err;
-    }
+    final req = File();
+    req.name = dest.name;
+    req.parents = dest.parents;
+    req.mimeType = 'application/x-binary';
+    req.description = dest.description;
+
+    log('Uploading ${data.length} bytes to "${req.description ?? req.name}"',
+        name: '$this');
+    final file = await drive.files.update(
+      req,
+      dest.id,
+      uploadMedia: Media(Stream.value(data.toList()), data.length),
+    );
+    return file;
   }
 
   // ---------------------------------------------------------------------------
