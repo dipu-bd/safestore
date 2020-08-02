@@ -1,6 +1,7 @@
 # Safestore
 
-![Flutter Release APK](https://github.com/dipu-bd/safestore/workflows/Flutter%20Release%20APK/badge.svg)
+[![Flutter Release APK](https://github.com/dipu-bd/safestore/workflows/Flutter%20Release%20APK/badge.svg)](https://github.com/dipu-bd/safestore/actions?query=workflow%3A%22Flutter+Release+APK%22)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/dipu-bd/safestore)](https://github.com/dipu-bd/safestore/releases)
 
 Hide away your private notes and files safely
 
