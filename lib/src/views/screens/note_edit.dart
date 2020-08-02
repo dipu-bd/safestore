@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:safestore/src/blocs/notes_bloc.dart';
-import 'package:safestore/src/blocs/storage_bloc.dart';
+import 'package:safestore/src/blocs/store_bloc.dart';
 import 'package:safestore/src/models/note.dart';
 
 class NoteEditDialog extends StatelessWidget {

@@ -4,7 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:safestore/src/blocs/auth_bloc.dart';
 import 'package:safestore/src/blocs/notes_bloc.dart';
-import 'package:safestore/src/blocs/storage_bloc.dart';
+import 'package:safestore/src/blocs/store_bloc.dart';
 import 'package:safestore/src/models/note.dart';
 import 'package:safestore/src/views/screens/note_edit.dart';
 
@@ -128,6 +128,14 @@ class HomeScreen extends StatelessWidget {
             child: CircularProgressIndicator(),
           );
         }
+        if (state.notes == null || state.notes.isEmpty) {
+          return Center(
+            child: Text(
+              'No notes found',
+              style: TextStyle(color: Colors.grey),
+            ),
+          );
+        }
         return buildNotes(context);
       },
     );
@@ -160,11 +168,6 @@ class HomeScreen extends StatelessWidget {
 
   Widget buildNotes(BuildContext context) {
     final state = NoteBloc.of(context).state;
-    if (state.notes == null || state.notes.isEmpty) {
-      return Container(
-        child: Text('No notes found'),
-      );
-    }
     return Column(
       children: <Widget>[
         ...state.notes.map((note) {

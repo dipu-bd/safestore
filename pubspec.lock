@@ -9,7 +9,7 @@ packages:
     source: hosted
     version: "0.2.0"
   archive:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: archive
       url: "https://pub.flutter-io.cn"

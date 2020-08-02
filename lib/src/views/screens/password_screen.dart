@@ -2,7 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:safestore/src/blocs/auth_bloc.dart';
-import 'package:safestore/src/blocs/storage_bloc.dart';
+import 'package:safestore/src/blocs/store_bloc.dart';
 
 class PasswordScreen extends StatelessWidget {
   final passwordFocus = FocusNode();

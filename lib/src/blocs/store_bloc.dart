@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:safestore/src/services/compress.dart';
 import 'package:safestore/src/services/crypto.dart';
 import 'package:safestore/src/services/google_drive.dart';
 import 'package:safestore/src/services/secure_storage.dart';
@@ -107,13 +108,15 @@ class StoreBloc extends Bloc<StoreEvent, StoreState> {
       final hasFile = await GoogleDrive().hasFile(state.binName);
       if (hasFile) {
         final online = await GoogleDrive().downloadFile(state.binName);
-        final text = Crypto.decrypt(online, state.passwordHash);
+        final compressed = Crypto.decrypt(online, state.passwordHash);
+        final text = Compression.uncompress(compressed); // after decrypt
         await SecureStorage().import(text);
       }
 
       // now try to export
       final data = await SecureStorage().export();
-      final offline = Crypto.encrypt(data, state.passwordHash);
+      final compressed = Compression.compress(data); // before encrypt
+      final offline = Crypto.encrypt(compressed, state.passwordHash);
       await GoogleDrive().uploadFile(state.binName, offline);
     } catch (err, stack) {
       log('$err', stackTrace: stack, name: '$this');
