@@ -46,6 +46,11 @@ class GoogleDrive {
     return _googleUser;
   }
 
+  void signOut() {
+    _googleUser = null;
+    _driveApiFuture = null;
+  }
+
   Future<DriveApi> initDrive() async {
     final googleUser = await signIn();
     final authHeaders = await googleUser.authHeaders;
@@ -76,7 +81,7 @@ class GoogleDrive {
   // ---------------------------------------------------------------------------
 
   Future<File> rootFolder() {
-    return _findOrCreate(rootFolderName, description: '/');
+    return _findOrCreate(rootFolderName);
   }
 
   Future<File> ensureFolder(String path) async {
@@ -106,12 +111,12 @@ class GoogleDrive {
 
   Future<bool> hasFolder(String path) async {
     final folder = await getFolder(path);
-    return folder != null && folder.description != '/';
+    return folder != null && folder.description.isEmpty;
   }
 
   Future<void> deleteFolder(String path) async {
     final folder = await getFolder(path);
-    if (folder != null && folder.description != '/') {
+    if (folder != null && folder.description.isEmpty) {
       log("Deleting ${folder.description}", name: '$this');
       final drive = await getDrive();
       await drive.files.delete(folder.id);
@@ -166,7 +171,7 @@ class GoogleDrive {
     }
   }
 
-  Future<Uint8List> downloadFile(String filePath) async {
+  Future<List<int>> downloadFile(String filePath) async {
     final file = await getFile(filePath);
     if (file == null) {
       throw new Exception('No such file');
@@ -186,36 +191,46 @@ class GoogleDrive {
     });
     assert(media.length == sink.length);
 
-    return Uint8List.fromList(sink);
+    return sink;
   }
 
-  Future<File> uploadFile(String filePath, List<int> data) async {
-    final drive = await getDrive();
-    final original = await ensureFile(filePath);
+  Future<File> uploadFile(String filePath, Uint8List data,
+      [bool tolerant = false]) async {
+    try {
+      final drive = await getDrive();
+      final original = await ensureFile(filePath);
 
-    final req = File();
-    req.name = original.name;
-    req.parents = original.parents;
-    req.mimeType = 'application/x-binary';
-    req.description = original.description;
+      final req = File();
+      req.name = original.name;
+      req.parents = original.parents;
+      req.mimeType = 'application/x-binary';
+      req.description = original.description;
 
-    log('Uploading ${data.length} bytes to "${req.description}"',
-        name: '$this');
-    final file = await drive.files.update(
-      req,
-      original.id,
-      uploadMedia: Media(Stream.value(data), data.length),
-    );
-    return file;
+      log('Uploading ${data.length} bytes to "${req.description ?? req.name}"',
+          name: '$this');
+      final file = await drive.files.update(
+        req,
+        original.id,
+        uploadMedia: Media(Stream.value(data.toList()), data.length),
+      );
+      return file;
+    } catch (err) {
+      if (tolerant) return null;
+      throw err;
+    }
   }
 
   // ---------------------------------------------------------------------------
 
   Future<File> _findFile(String name, {String parentId}) async {
+    assert(name != null && name.isNotEmpty);
+    assert(!name.contains('/'));
+    log('Looking for "$name"', name: '$this');
+
     final drive = await getDrive();
     final files = await drive.files.list(
       spaces: 'drive',
-      $fields: 'files(id, name, mimeType, description)',
+      $fields: 'files(id, name, mimeType, description, modifiedTime)',
       q: "name = '$name' and trashed = false" +
           (parentId != null ? " and '$parentId' in parents" : ""),
     );
@@ -231,10 +246,13 @@ class GoogleDrive {
     String description,
     bool isFile = false,
   }) async {
-    log('Create $description', name: '$this');
+    assert(name != null && name.isNotEmpty);
+    assert(!name.contains('/'));
+    log('Create "${description ?? name}"', name: '$this');
+
     final req = File();
     req.name = name;
-    req.description = description;
+    req.description = description ?? '';
     if (parentId != null) {
       req.parents = [parentId];
     }
@@ -256,6 +274,7 @@ class GoogleDrive {
   }) async {
     var file = await _findFile(name, parentId: parentId);
     if (file == null) {
+      log('Not found "${description ?? name}"', name: '$this');
       file = await _createFile(
         name,
         parentId: parentId,

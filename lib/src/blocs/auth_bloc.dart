@@ -1,6 +1,6 @@
 import 'dart:developer';
 
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:safestore/src/services/google_drive.dart';
 
@@ -15,7 +15,7 @@ class AuthState {
   String email;
   String username;
   String picture;
-  String passwordHash;
+  bool userFound = false;
 
   @override
   int get hashCode => email.hashCode;
@@ -54,11 +54,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       state.loading = true;
       state.loginError = null;
+      state.userFound = false;
       notify();
       final user = await GoogleDrive().signIn();
       state.email = user.email;
       state.username = user.displayName;
       state.picture = user.photoUrl;
+      state.userFound = true;
     } catch (err, stack) {
       log('$err', stackTrace: stack, name: '$this');
       state.loginError = '$err';

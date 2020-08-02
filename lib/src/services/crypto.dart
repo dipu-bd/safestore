@@ -33,42 +33,51 @@ abstract class Crypto {
 
   // ---------------------------------------------------------------------------
 
-  static String hashPassword(String password) {
+  static Uint8List hashPassword(String password) {
     if (![128, 192, 256].contains(CryptoConfig.AES_BITS)) {
       throw ArgumentError.value(
           CryptoConfig.AES_BITS, 'CryptoConfig.AES_BITS', 'Invalid for AES');
     }
 
-    final params = Pbkdf2Parameters(
-      Uint8List.fromList(utf8.encode(CryptoConfig.PBKDF2_SALT)),
-      CryptoConfig.PBKDF2_ITERATIONS,
-      CryptoConfig.AES_BITS,
-    );
-
     final derivator = PBKDF2KeyDerivator(
       HMac(SHA256Digest(), 64),
     );
+
+    final params = Pbkdf2Parameters(
+      Uint8List.fromList(utf8.encode(CryptoConfig.PBKDF2_SALT)),
+      CryptoConfig.PBKDF2_ITERATIONS,
+      CryptoConfig.AES_BITS ~/ 8,
+    );
+
     derivator.init(params);
 
     final hashBytes = derivator.process(
       Uint8List.fromList(utf8.encode(password)),
     );
-    return base64.encode(hashBytes.toList());
+    assert(hashBytes.length * 8 == CryptoConfig.AES_BITS);
+
+    return hashBytes;
   }
 
-  // ---------------------------------------------------------------------------
-
-  static String makeHash(String text) {
+  static Uint8List makeHash(Uint8List data, [int iteration = 1]) {
     final digest = SHA256Digest();
-    final data = utf8.encode(text);
-    final hash = digest.process(data);
-    return base64.encode(hash.toList());
+    for (int i = 0; i < iteration; ++i) {
+      data = digest.process(data);
+    }
+    return data;
+  }
+
+  static String generateId() {
+    final clock = DateTime.now().microsecondsSinceEpoch;
+    final random = generateRandom(128);
+    random.buffer.asByteData().setUint64(0, clock);
+    return base64.encode(random);
   }
 
   // ---------------------------------------------------------------------------
 
   static Uint8List _AES(
-      bool encrypt, Uint8List data, Uint8List iv, Uint8List key) {
+      bool encrypt, Uint8List source, Uint8List iv, Uint8List key) {
     if (iv.length * 8 != 128) {
       throw ArgumentError.value(iv, 'iv', 'Invalid iv length for AES');
     }
@@ -79,7 +88,6 @@ abstract class Crypto {
     final cbc = CBCBlockCipher(AESFastEngine());
     cbc.init(encrypt, ParametersWithIV(KeyParameter(key), iv));
 
-    final source = pad(data, 128); // padded plain text
     final dest = Uint8List(source.length); // allocate space
 
     var offset = 0;
@@ -91,9 +99,8 @@ abstract class Crypto {
     return dest;
   }
 
-  static Uint8List encrypt(Uint8List plain, String passwordHash) {
-    // Get 256 bit long key
-    final key = base64.decode(passwordHash);
+  static Uint8List encrypt(Iterable<int> input, Uint8List key) {
+    Uint8List plain = Uint8List.fromList(input);
     // Generate 128-bit long iv
     final iv = generateRandom(128);
     // Pad plain text
@@ -101,22 +108,30 @@ abstract class Crypto {
     // Encrypt using AES/CBC
     final cipher = _AES(true, plain, iv, key); // true=encrypt
     // Put iv at specific position
-    final pos = key[128] % cipher.length;
-    cipher.insertAll(pos, iv);
+    final output = <int>[]..addAll(iv)..addAll(cipher);
     // all done
-    return cipher;
+    return Uint8List.fromList(output);
   }
 
-  static Uint8List decrypt(Uint8List cipher, String passwordHash) {
-    // Get 256 bit long key
-    final key = base64.decode(passwordHash);
+  static Uint8List decrypt(Iterable<int> input, Uint8List key) {
     // Extract iv from specific position of the cipher
-    final pos = key[128] % cipher.length;
-    final iv = cipher.sublist(pos, pos + 128);
-    cipher.removeRange(pos, pos + 128);
+    final iv = Uint8List.fromList(input.take(16).toList());
+    final cipher = Uint8List.fromList(input.skip(16).toList());
     // Decrypt using AES/CBC
     final plain = _AES(false, cipher, iv, key); // false=decrypt
-    // Unpad and return
-    return unpad(plain);
+    // Unpad the plain text
+    final output = unpad(plain);
+    // all done
+    return output;
+  }
+
+  static String encryptText(String text, Uint8List key) {
+    final cipher = encrypt(utf8.encode(text), key);
+    return utf8.decode(cipher.toList());
+  }
+
+  static String decryptText(String text, Uint8List key) {
+    final plain = decrypt(utf8.encode(text), key);
+    return utf8.decode(plain.toList());
   }
 }

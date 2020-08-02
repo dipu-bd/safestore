@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:safestore/src/blocs/auth_bloc.dart';
 
 class LoginScreen extends StatelessWidget {
@@ -7,20 +8,23 @@ class LoginScreen extends StatelessWidget {
     final state = AuthBloc.of(context).state;
     return SafeArea(
       child: Scaffold(
-        body: Container(
-          alignment: Alignment.center,
-          padding: EdgeInsets.all(15),
-          child: state.loading
-              ? buildLoading()
-              : state.loginError != null && state.loginError.isNotEmpty
-                  ? buildError(context)
-                  : buildContent(),
+        body: SingleChildScrollView(
+          child: Container(
+            alignment: Alignment.center,
+            padding: EdgeInsets.all(15),
+            height: MediaQuery.of(context).size.height - kToolbarHeight - 24,
+            child: state.loading
+                ? buildLoading(context)
+                : state.loginError != null && state.loginError.isNotEmpty
+                    ? buildError(context)
+                    : buildLoginForm(),
+          ),
         ),
       ),
     );
   }
 
-  Widget buildLoading() {
+  Widget buildLoading(BuildContext context) {
     return CircularProgressIndicator();
   }
 
@@ -38,7 +42,7 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
-  Widget buildContent() {
+  Widget buildLoginForm() {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
@@ -53,20 +57,18 @@ class LoginScreen extends StatelessWidget {
         SizedBox(height: 10),
         Text(
           'Safestore',
-          style: TextStyle(
+          style: GoogleFonts.baloo(
             fontSize: 28,
+            color: Colors.amber,
           ),
         ),
-        SizedBox(height: 5),
         Text(
           'One place to store all your secrets',
-          style: TextStyle(
-            fontSize: 14,
-            fontFamily: 'serif',
-            fontStyle: FontStyle.italic,
+          style: GoogleFonts.anticSlab(
+            fontSize: 16,
           ),
         ),
-        SizedBox(height: 50),
+        SizedBox(height: 100),
         Builder(builder: buildLoginButton),
       ],
     );
@@ -74,6 +76,7 @@ class LoginScreen extends StatelessWidget {
 
   Widget buildLoginButton(BuildContext context) {
     return RaisedButton(
+      color: Colors.blueGrey,
       onPressed: () => AuthBloc.of(context).login(),
       child: Container(
         child: Wrap(
