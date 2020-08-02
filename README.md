@@ -1,4 +1,6 @@
-# safestore
+# Safestore
+
+![Flutter Release APK](https://github.com/dipu-bd/safestore/workflows/Flutter%20Release%20APK/badge.svg)
 
 Hide away your private notes and files safely
 
