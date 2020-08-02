@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:safestore/src/blocs/notes_bloc.dart';
+import 'package:safestore/src/blocs/storage_bloc.dart';
 import 'package:safestore/src/models/note.dart';
 
 class NoteEditDialog extends StatelessWidget {
@@ -30,20 +31,27 @@ class NoteEditDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
+      top: false,
       child: Scaffold(
-        appBar: buildAppBar(),
+        appBar: buildAppBar(context),
         body: buildForm(context),
         floatingActionButton: buildFAB(),
       ),
     );
   }
 
-  Widget buildAppBar() {
+  Widget buildAppBar(BuildContext context) {
     return AppBar(
       title: Text(
-        'New Note',
+        note.updateTime != note.createTime ? 'Edit Note' : 'New Note',
         style: GoogleFonts.baloo(),
       ),
+      actions: <Widget>[
+        IconButton(
+          icon: Icon(Icons.delete),
+          onPressed: () => handleNoteDelete(context),
+        ),
+      ],
     );
   }
 
@@ -57,6 +65,7 @@ class NoteEditDialog extends StatelessWidget {
             note.title = titleController.text;
             note.body = bodyController.text;
             await NoteBloc.of(context).saveNote(note);
+            StoreBloc.of(context).sync(); // do a sync
             Navigator.of(context).pop();
           },
         );
@@ -102,5 +111,30 @@ class NoteEditDialog extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  void handleNoteDelete(BuildContext context) async {
+    final confirm = await showDialog(
+      context: context,
+      child: AlertDialog(
+        title: Text('Delete Note'),
+        content: Text('Are you sure to delete this note?'),
+        actions: <Widget>[
+          FlatButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text('No'),
+          ),
+          FlatButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text('Yes', style: TextStyle(color: Colors.amber)),
+          ),
+        ],
+      ),
+    );
+    if (confirm) {
+      await NoteBloc.of(context).deleteNote(note);
+      StoreBloc.of(context).sync(); // do a sync
+      Navigator.of(context).pop();
+    }
   }
 }

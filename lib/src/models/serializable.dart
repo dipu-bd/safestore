@@ -5,8 +5,11 @@ abstract class Serializable {
   String _id;
   num _createTime;
   num _updateTime;
+  bool _trashed = false;
 
   String get id => _id;
+
+  bool get trashed => _trashed;
 
   DateTime get createTime => DateTime.fromMillisecondsSinceEpoch(_createTime);
 
@@ -23,6 +26,7 @@ abstract class Serializable {
   @mustCallSuper
   void fromJson(Map<String, dynamic> data) {
     _id = data['id'];
+    _trashed = data['trashed'];
     _createTime = data['create_time'];
     _updateTime = data['update_time'];
   }
@@ -31,9 +35,9 @@ abstract class Serializable {
   Map<String, dynamic> toJson() {
     final data = Map<String, dynamic>();
     data['id'] = _id;
+    data['trashed'] = _trashed;
     data['create_time'] = _createTime;
     data['update_time'] = _updateTime;
-    data['type'] = this.runtimeType.toString();
     return data;
   }
 }

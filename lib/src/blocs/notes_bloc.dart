@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
@@ -59,10 +58,7 @@ class NoteBloc extends Bloc<NoteEvent, NoteState> {
       notify();
 
       final all = await SecureStorage().listAll();
-      state.notes = all.entries.map((e) {
-        final data = json.decode(e.value);
-        return Note()..fromJson(data);
-      }).toList();
+      state.notes = all.values.map((e) => Note()..fromJson(e)).toList();
     } catch (err, stack) {
       log('$err', stackTrace: stack, name: '$this');
       state.loadError = '$err';

@@ -47,6 +47,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   void logout() {
+    GoogleDrive().signOut();
     add(AuthEvent.purge);
   }
 

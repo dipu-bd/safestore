@@ -9,12 +9,6 @@ import 'package:safestore/src/models/note.dart';
 import 'package:safestore/src/views/screens/note_edit.dart';
 
 class HomeScreen extends StatelessWidget {
-  void onLogout(BuildContext context) {
-    NoteBloc.of(context).clear();
-    StoreBloc.of(context).clear();
-    AuthBloc.of(context).logout();
-  }
-
   @override
   Widget build(BuildContext context) {
     final state = NoteBloc.of(context).state;
@@ -23,6 +17,7 @@ class HomeScreen extends StatelessWidget {
       NoteBloc.of(context).loadNotes();
     }
     return SafeArea(
+      top: false,
       child: Scaffold(
         appBar: buildAppBar(context),
         drawer: buildDrawer(context),
@@ -35,9 +30,10 @@ class HomeScreen extends StatelessWidget {
           },
           child: SingleChildScrollView(
             child: Container(
-              alignment: Alignment.center,
               padding: EdgeInsets.all(10),
-              height: MediaQuery.of(context).size.height,
+              constraints: BoxConstraints(
+                minHeight: MediaQuery.of(context).size.height - kToolbarHeight,
+              ),
               child: buildContent(),
             ),
           ),
@@ -47,6 +43,7 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget buildAppBar(BuildContext context) {
+    final store = StoreBloc.of(context).state;
     return AppBar(
       title: Text(
         'Notes',
@@ -58,6 +55,15 @@ class HomeScreen extends StatelessWidget {
           onPressed: () => StoreBloc.of(context).sync(),
         ),
       ],
+      bottom: store.syncing
+          ? PreferredSize(
+              preferredSize: Size.fromHeight(5),
+              child: SizedBox(
+                height: 5,
+                child: LinearProgressIndicator(),
+              ),
+            )
+          : null,
     );
   }
 
@@ -90,7 +96,7 @@ class HomeScreen extends StatelessWidget {
             child: RaisedButton(
               color: Colors.amber,
               textColor: Colors.black,
-              onPressed: () => onLogout(context),
+              onPressed: () => handleLogout(context),
               child: Container(
                 alignment: Alignment.center,
                 child: Text('Logout'),
@@ -113,10 +119,14 @@ class HomeScreen extends StatelessWidget {
     return BlocBuilder<NoteBloc, NoteState>(
       builder: (context, state) {
         if (state.loadError != null) {
-          return buildError(state.loadError);
+          return Center(
+            child: buildError(state.loadError),
+          );
         }
         if (state.loading) {
-          return CircularProgressIndicator();
+          return Center(
+            child: CircularProgressIndicator(),
+          );
         }
         return buildNotes(context);
       },
@@ -136,7 +146,7 @@ class HomeScreen extends StatelessWidget {
         ),
         actions: <Widget>[
           FlatButton(
-            onPressed: () => onLogout(context),
+            onPressed: () => handleLogout(context),
             child: Text('Logout'),
           ),
           FlatButton(
@@ -156,53 +166,31 @@ class HomeScreen extends StatelessWidget {
       );
     }
     return Column(
-      children: state.notes.map((note) {
-        return Card(
-          child: ListTile(
-            title: Text(
-              note.title,
-              style: GoogleFonts.delius(fontSize: 20, color: Colors.amber),
+      children: <Widget>[
+        ...state.notes.map((note) {
+          return Card(
+            child: ListTile(
+              title: Text(
+                note.title,
+                style: GoogleFonts.delius(fontSize: 20, color: Colors.amber),
+              ),
+              subtitle: Text(
+                note.body.length > 500
+                    ? note.body.substring(0, 500) + '...'
+                    : note.body,
+                style: GoogleFonts.delius(fontSize: 14),
+              ),
+              onTap: () => NoteEditDialog.show(context, note),
             ),
-            subtitle: Text(
-              note.body.length > 1500
-                  ? note.body.substring(0, 1500) + '...'
-                  : note.body,
-              style: GoogleFonts.delius(fontSize: 14),
-            ),
-            onTap: () => NoteEditDialog.show(context, note),
-            trailing: IconButton(
-              icon: Icon(Icons.delete),
-              onPressed: () => handleNoteDelete(context, note),
-            ),
-          ),
-        );
-      }).toList(),
+          );
+        }),
+      ],
     );
   }
 
-  void handleNoteDelete(BuildContext context, Note note) async {
-    final confirm = await showDialog(
-      context: context,
-      child: AlertDialog(
-        title: Text('Delete Note'),
-        content: Text('Are you sure to delete this note?'),
-        actions: <Widget>[
-          FlatButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text('Yes'),
-          ),
-          FlatButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(
-              'No',
-              style: TextStyle(color: Theme.of(context).primaryColor),
-            ),
-          ),
-        ],
-      ),
-    );
-    if (confirm) {
-      await NoteBloc.of(context).deleteNote(note);
-    }
+  void handleLogout(BuildContext context) {
+    NoteBloc.of(context).clear();
+    StoreBloc.of(context).clear();
+    AuthBloc.of(context).logout();
   }
 }

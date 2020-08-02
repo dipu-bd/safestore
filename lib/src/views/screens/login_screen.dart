@@ -7,6 +7,7 @@ class LoginScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = AuthBloc.of(context).state;
     return SafeArea(
+      top: false,
       child: Scaffold(
         body: SingleChildScrollView(
           child: Container(

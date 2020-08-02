@@ -189,7 +189,7 @@ class GoogleDrive {
     await media.stream.forEach((data) {
       sink.addAll(data);
     });
-    assert(media.length == sink.length);
+    //assert(media.length == sink.length);
 
     return sink;
   }

@@ -12,11 +12,16 @@ class PasswordScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = StoreBloc.of(context).state;
     return SafeArea(
+      top: false,
       child: Scaffold(
         appBar: AppBar(
           title: Text(
             'Access Bin',
             style: GoogleFonts.baloo(),
+          ),
+          leading: IconButton(
+            icon: Icon(Icons.close),
+            onPressed: () => handleLogout(context),
           ),
         ),
         body: SingleChildScrollView(
@@ -95,5 +100,10 @@ class PasswordScreen extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  void handleLogout(BuildContext context) {
+    StoreBloc.of(context).clear();
+    AuthBloc.of(context).logout();
   }
 }

@@ -15,74 +15,105 @@ class SecureStorage {
 
   static final exportTimeKey = 'export_time';
   static final updateTimeKey = 'update_time';
-  final _storage = FlutterSecureStorage();
+  final _store = FlutterSecureStorage();
 
-  Future<Map<String, String>> listAll() {
-    return _storage.readAll();
+  Future<Map<String, Map<String, dynamic>>> listAll([
+    bool includeTrash = false,
+  ]) async {
+    final Map<String, String> all = await _store.readAll();
+    final result = Map<String, Map<String, dynamic>>();
+    all.keys.forEach((key) {
+      if (key == updateTimeKey) return;
+      final Map<String, dynamic> value = json.decode(all[key]);
+      if (includeTrash || !(value['trashed'] ?? false)) {
+        result[key] = value;
+      }
+    });
+    return result;
   }
 
   Future<Map<String, dynamic>> open(String id) async {
-    final source = await _storage.read(key: id);
+    final source = await _store.read(key: id);
     return json.decode(source);
   }
 
   Future<void> save(Map<String, dynamic> entity) async {
-    entity[updateTimeKey] = DateTime.now().millisecondsSinceEpoch;
+    final time = DateTime.now().millisecondsSinceEpoch;
+    entity[updateTimeKey] = time;
     log('Saving $entity', name: '$this');
-    await _storage.write(
+    await _store.write(
       key: entity['id'],
       value: json.encode(entity),
+    );
+    await _store.write(
+      key: updateTimeKey,
+      value: time.toString(),
     );
   }
 
   Future<void> delete(String id) async {
     log('Deleting $id', name: '$this');
-    await _storage.delete(key: id);
+    final entity = await open(id);
+    entity['trashed'] = true;
+    await save(entity);
   }
 
   // ---------------------------------------------------------------------------
 
   Future<Uint8List> export() async {
-    final Map<String, dynamic> all = await _storage.readAll();
-    all[exportTimeKey] = DateTime.now().millisecondsSinceEpoch.toString();
-    return utf8.encode(json.encode(all));
+    final Map<String, dynamic> all = await listAll();
+    log('Exporting at ${DateTime.now()}', name: '$this');
+    final Map<String, dynamic> data = {
+      'all': all,
+      exportTimeKey: DateTime.now().millisecondsSinceEpoch,
+    };
+    return utf8.encode(json.encode(data));
   }
 
   Future<void> import(Uint8List input) async {
     // Decipher and get the data
     final Map<String, dynamic> data = json.decode(utf8.decode(input));
-    final exportTime = num.tryParse(data.remove(exportTimeKey)) ?? 0;
+    final exportTime = (data[exportTimeKey] as num) ?? 0;
+    final exportDate = DateTime.fromMillisecondsSinceEpoch(exportTime);
+    log('Importing data with export time $exportDate', name: '$this');
+
+    // The entity list to import
+    final Map<String, dynamic> entities = data['all'] ?? {};
 
     // Read currently available data
-    final all = await _storage.readAll();
-
-    // Put new entries to all
-    await Future.wait(data.entries.map((entry) async {
-      if (!all.containsKey(entry.key)) {
-        log('Adding ${entry.key}', name: '$this');
-        await _storage.write(key: entry.key, value: entry.value);
-      }
-    }));
+    final all = await _store.readAll();
+    final updateTime = num.tryParse(await _store.read(key: updateTimeKey)) ?? 0;
+    final updateDate = DateTime.fromMillisecondsSinceEpoch(updateTime);
+    log('Last update time $updateDate', name: '$this');
 
     // Merge updated entries
     await Future.wait(all.entries.map((entry) async {
-      final updateTime = json.decode(entry.value)[updateTimeKey] as num;
-      if (!data.containsKey(entry.key)) {
-        // either key is a new entry or it was deleted
+      if (entry.key == updateTimeKey) return;
+      if (!entities.containsKey(entry.key)) {
+        // either the entry is new or deleted
         if (updateTime < exportTime) {
-          // since the last update time of the current entity is lower than
-          // the write time of incoming data, the current entity was deleted
-          log('Deleting ${entry.key}', name: '$this');
-          await _storage.delete(key: entry.key);
+          // since the last update time is lower than the export time,
+          // the current entity was deleted
+          await _store.delete(key: entry.key);
+          entities.remove(entry.key);
         }
       } else {
         // the value was either modified or remained unchanged
         if (updateTime < exportTime) {
-          // since the last update time of the current entity is lower than
-          // the write time of incoming data, the current entity is older
-          log('Updating ${entry.key}', name: '$this');
-          await _storage.write(key: entry.key, value: data[entry.key]);
+          // since the last update time is lower than the export time,
+          // the current entity was modified
+          await _store.write(
+            key: entry.key,
+            value: json.encode(entities[entry.key]),
+          );
         }
+      }
+    }));
+
+    // Add all new entities
+    await Future.wait(entities.entries.map((entry) async {
+      if (!all.containsKey(entry.key)) {
+        await save(entry.value);
       }
     }));
   }
