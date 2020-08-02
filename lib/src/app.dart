@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:safestore/src/blocs/auth_bloc.dart';
-import 'package:safestore/src/blocs/notes_bloc.dart';
 import 'package:safestore/src/blocs/store_bloc.dart';
 import 'package:safestore/src/views/screens/home_screen.dart';
 import 'package:safestore/src/views/screens/login_screen.dart';
@@ -17,9 +16,6 @@ class App extends StatelessWidget {
         ),
         BlocProvider<StoreBloc>(
           create: (_) => StoreBloc(),
-        ),
-        BlocProvider<NoteBloc>(
-          create: (_) => NoteBloc(),
         ),
       ],
       child: MaterialApp(

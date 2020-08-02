@@ -2,7 +2,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:safestore/src/blocs/auth_bloc.dart';
-import 'package:safestore/src/blocs/notes_bloc.dart';
 import 'package:safestore/src/blocs/store_bloc.dart';
 
 class PasswordScreen extends StatelessWidget {
@@ -105,9 +104,7 @@ class PasswordScreen extends StatelessWidget {
   }
 
   void handleSubmit(BuildContext context) {
-    final state = StoreBloc.of(context).state;
     StoreBloc.of(context).openBin(textController.text);
-    NoteBloc.of(context).init(state.storage);
   }
 
   void handleLogout(BuildContext context) {

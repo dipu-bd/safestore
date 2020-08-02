@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:convert/convert.dart';
 import 'package:pointycastle/export.dart';
 import "package:pointycastle/pointycastle.dart";
 import 'package:safestore/src/config/crypto.dart';
@@ -33,6 +34,31 @@ abstract class Crypto {
 
   // ---------------------------------------------------------------------------
 
+  static Uint8List makeHash(Uint8List data, [int iteration = 1]) {
+    final digest = SHA256Digest();
+    for (int i = 0; i < iteration; ++i) {
+      data = digest.process(data);
+    }
+    return data;
+  }
+
+  static String generateId() {
+    final clock = DateTime.now().microsecondsSinceEpoch;
+    final random = generateRandom(128);
+    random.buffer.asByteData().setUint64(0, clock);
+    return base64.encode(random);
+  }
+
+  // ---------------------------------------------------------------------------
+
+  static String md5sum(Iterable<int> data) {
+    final md5 = MD5Digest();
+    final sum = md5.process(Uint8List.fromList(data));
+    return hex.encode(sum);
+  }
+
+  // ---------------------------------------------------------------------------
+
   static Uint8List hashPassword(String password) {
     if (![128, 192, 256].contains(CryptoConfig.AES_BITS)) {
       throw ArgumentError.value(
@@ -57,21 +83,6 @@ abstract class Crypto {
     assert(hashBytes.length * 8 == CryptoConfig.AES_BITS);
 
     return hashBytes;
-  }
-
-  static Uint8List makeHash(Uint8List data, [int iteration = 1]) {
-    final digest = SHA256Digest();
-    for (int i = 0; i < iteration; ++i) {
-      data = digest.process(data);
-    }
-    return data;
-  }
-
-  static String generateId() {
-    final clock = DateTime.now().microsecondsSinceEpoch;
-    final random = generateRandom(128);
-    random.buffer.asByteData().setUint64(0, clock);
-    return base64.encode(random);
   }
 
   // ---------------------------------------------------------------------------

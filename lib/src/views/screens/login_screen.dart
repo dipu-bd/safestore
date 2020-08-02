@@ -13,7 +13,7 @@ class LoginScreen extends StatelessWidget {
           child: Container(
             alignment: Alignment.center,
             padding: EdgeInsets.all(15),
-            height: MediaQuery.of(context).size.height - kToolbarHeight - 24,
+            height: MediaQuery.of(context).size.height - 24,
             child: state.loading
                 ? buildLoading(context)
                 : state.loginError != null && state.loginError.isNotEmpty

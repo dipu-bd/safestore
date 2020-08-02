@@ -35,6 +35,7 @@ class GoogleDrive {
 
   GoogleSignInAccount _googleUser;
   Future<DriveApi> _driveApiFuture;
+  Future<File> _rootFolder;
 
   Future<GoogleSignInAccount> signIn() async {
     if (_googleUser == null) {
@@ -47,6 +48,7 @@ class GoogleDrive {
   }
 
   void signOut() {
+    _rootFolder = null;
     _googleUser = null;
     _driveApiFuture = null;
   }
@@ -80,132 +82,93 @@ class GoogleDrive {
 
   // ---------------------------------------------------------------------------
 
-  Future<File> rootFolder() {
-    return _findOrCreate(rootFolderName);
+  Future<File> findFile(String name, {File parent}) async {
+    assert(name != null && name.isNotEmpty);
+    assert(!name.contains('/'));
+    log('Looking for "$name"', name: '$this');
+
+    final drive = await getDrive();
+    final files = await drive.files.list(
+      spaces: 'drive',
+      $fields: 'files(id, name, mimeType, description, md5Checksum)',
+      q: "name = '$name' and trashed = false" +
+          (parent != null ? " and '${parent.id}' in parents" : ""),
+    );
+    if (files.files.isNotEmpty) {
+      return files.files.first;
+    }
+    return null;
   }
 
-  Future<File> ensureFolder(String path) async {
-    String description = '';
-    File folder = await rootFolder();
-    for (final name in (path ?? '').split('/')) {
-      if (name == null || name.trim().isEmpty) continue;
-      description += '/$name';
-      folder = await _findOrCreate(
+  Future<File> createFile(
+    String name, {
+    File parent,
+    bool isFile = false,
+  }) async {
+    assert(name != null && name.isNotEmpty);
+    assert(!name.contains('/'));
+
+    final req = File();
+    req.name = name;
+    req.description = "${parent.description ?? ''}/$name";
+    if (parent.id != null) {
+      req.parents = [parent.id];
+    }
+    if (isFile) {
+      req.mimeType = 'application/x-binary';
+    } else {
+      req.mimeType = 'application/vnd.google-apps.folder';
+    }
+
+    log('Create "${req.toJson()}"', name: '$this');
+    final drive = await getDrive();
+    final file = await drive.files.create(req);
+    return file;
+  }
+
+  Future<File> findOrCreate(
+    String name, {
+    File parent,
+    bool isFile = false,
+  }) async {
+    var file = await findFile(name, parent: parent);
+    if (file == null) {
+      log('Not found "$name"', name: '$this');
+      file = await createFile(
         name,
-        parentId: folder.id,
-        description: description,
+        parent: parent,
+        isFile: isFile,
       );
     }
-    return folder;
-  }
-
-  Future<File> getFolder(String path) async {
-    File folder = await rootFolder();
-    for (final name in (path ?? '').split('/')) {
-      if (name == null || name.trim().isEmpty) continue;
-      folder = await _findFile(name, parentId: folder.id);
-      if (folder == null) return null;
-    }
-    return folder;
-  }
-
-  Future<bool> hasFolder(String path) async {
-    final folder = await getFolder(path);
-    return folder != null && folder.description.isEmpty;
-  }
-
-  Future<void> deleteFolder(String path) async {
-    final folder = await getFolder(path);
-    if (folder != null && folder.description.isEmpty) {
-      log("Deleting ${folder.description}", name: '$this');
-      final drive = await getDrive();
-      await drive.files.delete(folder.id);
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-
-  Future<File> ensureFile(String path) async {
-    final parts = (path ?? '').split('/');
-    String name = parts.removeLast();
-    if (name.isEmpty) {
-      throw Exception('File name should not be empty');
-    }
-
-    File folder = await ensureFolder(parts.join('/'));
-    final file = await _findOrCreate(
-      name,
-      parentId: folder.id,
-      description: (folder.description ?? '') + '/$name',
-      isFile: true,
-    );
     return file;
-  }
-
-  Future<File> getFile(String path) async {
-    final parts = (path ?? '').split('/');
-    String name = parts.removeLast();
-    if (name.isEmpty) return null;
-
-    File folder = await getFolder(parts.join('/'));
-    if (folder == null) return null;
-
-    final file = await _findFile(
-      name,
-      parentId: folder.id,
-    );
-    return file;
-  }
-
-  Future<bool> hasFile(String filePath) async {
-    final file = await getFile(filePath);
-    return file != null;
-  }
-
-  Future<void> deleteFile(String filePath) async {
-    final file = await getFile(filePath);
-    if (file != null) {
-      log("Deleting ${file.description}", name: '$this');
-      final drive = await getDrive();
-      await drive.files.delete(file.id);
-    }
-  }
-
-  Future<List<int>> downloadFileByPath(String filePath) async {
-    final file = await getFile(filePath);
-    if (file == null) {
-      throw new Exception('No such file');
-    }
-    return downloadFile(file);
   }
 
   Future<List<int>> downloadFile(File file) async {
+    if (file == null) {
+      throw new Exception('No such file');
+    }
     final drive = await getDrive();
     final Media media = await drive.files.get(
       file.id,
       downloadOptions: DownloadOptions.FullMedia,
     );
 
-    log('Downloading ${media.length} bytes from "${file.description}"',
+    log('Get "${media.length}" bytes from "${file.description}"',
         name: '$this');
     final sink = List<int>();
     await media.stream.forEach((data) {
       sink.addAll(data);
     });
-    //assert(media.length == sink.length);
+    assert(media.length == null || media.length == sink.length);
 
     return sink;
   }
 
-  Future<File> uploadFileByPath(String filePath, Uint8List data,
-      [bool tolerant = false]) async {
-    final file = await ensureFile(filePath);
-    return await uploadFile(file, data, tolerant);
-  }
-
   Future<File> uploadFile(File dest, Uint8List data,
       [bool tolerant = false]) async {
-    final drive = await getDrive();
+    if (dest == null) {
+      throw new Exception('No such file');
+    }
 
     final req = File();
     req.name = dest.name;
@@ -213,8 +176,8 @@ class GoogleDrive {
     req.mimeType = 'application/x-binary';
     req.description = dest.description;
 
-    log('Uploading ${data.length} bytes to "${req.description ?? req.name}"',
-        name: '$this');
+    log('Upload ${data.length} bytes to "${req.description}"', name: '$this');
+    final drive = await getDrive();
     final file = await drive.files.update(
       req,
       dest.id,
@@ -223,68 +186,98 @@ class GoogleDrive {
     return file;
   }
 
+  Future<void> deleteFile(File file) async {
+    if (file == null) return;
+    log("Deleting ${file.description}", name: '$this');
+    final drive = await getDrive();
+    await drive.files.delete(file.id);
+  }
+
   // ---------------------------------------------------------------------------
 
-  Future<File> _findFile(String name, {String parentId}) async {
-    assert(name != null && name.isNotEmpty);
-    assert(!name.contains('/'));
-    log('Looking for "$name"', name: '$this');
-
-    final drive = await getDrive();
-    final files = await drive.files.list(
-      spaces: 'drive',
-      $fields: 'files(id, name, mimeType, description, modifiedTime)',
-      q: "name = '$name' and trashed = false" +
-          (parentId != null ? " and '$parentId' in parents" : ""),
-    );
-    if (files.files.isNotEmpty) {
-      return files.files.first;
+  Future<File> rootFolder() {
+    if (_rootFolder == null) {
+      _rootFolder = findOrCreate(rootFolderName);
     }
-    return null;
+    return _rootFolder;
   }
 
-  Future<File> _createFile(
-    String name, {
-    String parentId,
-    String description,
-    bool isFile = false,
-  }) async {
-    assert(name != null && name.isNotEmpty);
-    assert(!name.contains('/'));
-    log('Create "${description ?? name}"', name: '$this');
+  Future<File> ensureFolder(String path) async {
+    File folder = await rootFolder();
+    for (final name in (path ?? '').split('/')) {
+      if (name == null || name.trim().isEmpty) continue;
+      folder = await findOrCreate(name, parent: folder);
+    }
+    return folder;
+  }
 
-    final req = File();
-    req.name = name;
-    req.description = description ?? '';
-    if (parentId != null) {
-      req.parents = [parentId];
+  Future<File> findFolder(String path) async {
+    File folder = await rootFolder();
+    for (final name in (path ?? '').split('/')) {
+      if (name == null || name.trim().isEmpty) continue;
+      folder = await findFile(name, parent: folder);
+      if (folder == null) return null;
     }
-    if (isFile) {
-      req.mimeType = 'application/x-binary';
-    } else {
-      req.mimeType = 'application/vnd.google-apps.folder';
+    return folder;
+  }
+
+  Future<bool> hasFolder(String path) async {
+    final folder = await findFolder(path);
+    return folder != null;
+  }
+
+  Future<void> deleteFolder(String path) async {
+    final folder = await findFolder(path);
+    if (folder == null || folder.description.isEmpty) {
+      return; // should not delete root folder
     }
-    final drive = await getDrive();
-    final file = await drive.files.create(req);
+    deleteFile(folder);
+  }
+
+  // ---------------------------------------------------------------------------
+
+  Future<File> ensureFileByPath(String path) async {
+    final parts = (path ?? '').split('/');
+    String name = parts.removeLast();
+    if (name.isEmpty) {
+      throw Exception('File name should not be empty');
+    }
+
+    File folder = await ensureFolder(parts.join('/'));
+    final file = await findOrCreate(name, parent: folder, isFile: true);
     return file;
   }
 
-  Future<File> _findOrCreate(
-    String name, {
-    String parentId,
-    String description,
-    bool isFile = false,
-  }) async {
-    var file = await _findFile(name, parentId: parentId);
-    if (file == null) {
-      log('Not found "${description ?? name}"', name: '$this');
-      file = await _createFile(
-        name,
-        parentId: parentId,
-        description: description,
-        isFile: isFile,
-      );
-    }
+  Future<File> findFileByPath(String path) async {
+    final parts = (path ?? '').split('/');
+    String name = parts.removeLast();
+    if (name.isEmpty) return null;
+
+    File folder = await findFolder(parts.join('/'));
+    if (folder == null) return null;
+
+    final file = await findFile(name, parent: folder);
     return file;
+  }
+
+  Future<bool> hasFileByPath(String filePath) async {
+    final file = await findFileByPath(filePath);
+    return file != null;
+  }
+
+  Future<void> deleteFileByPath(String filePath) async {
+    final file = await findFileByPath(filePath);
+    await deleteFile(file);
+  }
+
+  Future<List<int>> downloadFileByPath(String filePath) async {
+    final file = await findFileByPath(filePath);
+    return downloadFile(file);
+  }
+
+  Future<File> uploadFileByPath(String filePath, Uint8List data,
+      [bool tolerant = false]) async {
+    final file = await ensureFileByPath(filePath);
+    return await uploadFile(file, data, tolerant);
   }
 }

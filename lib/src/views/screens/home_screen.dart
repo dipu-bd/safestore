@@ -1,9 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:safestore/src/blocs/auth_bloc.dart';
-import 'package:safestore/src/blocs/notes_bloc.dart';
 import 'package:safestore/src/blocs/store_bloc.dart';
 import 'package:safestore/src/models/note.dart';
 import 'package:safestore/src/views/screens/note_edit.dart';
@@ -25,7 +23,7 @@ class HomeScreen extends StatelessWidget {
               constraints: BoxConstraints(
                 minHeight: MediaQuery.of(context).size.height - kToolbarHeight,
               ),
-              child: buildContent(),
+              child: buildContent(context),
             ),
           ),
         ),
@@ -106,62 +104,20 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget buildContent() {
-    return BlocBuilder<NoteBloc, NoteState>(
-      builder: (context, state) {
-        if (state.loadError != null) {
-          return Center(
-            child: buildError(state.loadError),
-          );
-        }
-        if (state.loading) {
-          return Center(
-            child: CircularProgressIndicator(),
-          );
-        }
-        if (state.notes == null || state.notes.isEmpty) {
-          return Center(
-            child: Text(
-              'No notes found',
-              style: TextStyle(color: Colors.grey),
-            ),
-          );
-        }
-        return buildNotes(context);
-      },
-    );
-  }
-
-  Widget buildError(String error) {
-    return Builder(
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Load Error',
-          style: GoogleFonts.openSans(color: Colors.amber),
+  Widget buildContent(BuildContext context) {
+    final state = StoreBloc.of(context).state;
+    final notes = state.storage.finalAll();
+    if (notes.isEmpty) {
+      return Center(
+        child: Text(
+          'No notes found',
+          style: TextStyle(color: Colors.grey),
         ),
-        content: Text(
-          error,
-          style: GoogleFonts.firaMono(fontSize: 14),
-        ),
-        actions: <Widget>[
-          FlatButton(
-            onPressed: () => handleLogout(context),
-            child: Text('Logout'),
-          ),
-          FlatButton(
-            onPressed: () => NoteBloc.of(context).loadNotes(),
-            child: Text('Retry', style: TextStyle(color: Colors.amber)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget buildNotes(BuildContext context) {
-    final state = NoteBloc.of(context).state;
+      );
+    }
     return Column(
       children: <Widget>[
-        ...state.notes.map((note) {
+        ...notes.map((note) {
           return Card(
             child: ListTile(
               title: Text(
@@ -185,15 +141,10 @@ class HomeScreen extends StatelessWidget {
   }
 
   Future<void> handleRefresh(BuildContext context) async {
-    final state = NoteBloc.of(context).state;
-    final store = StoreBloc.of(context).state;
-    if (state.loading || store.syncing) return;
-    await StoreBloc.of(context).sync();
-    await NoteBloc.of(context).loadNotes();
+    StoreBloc.of(context).sync();
   }
 
   void handleLogout(BuildContext context) {
-    NoteBloc.of(context).clear();
     StoreBloc.of(context).clear();
     AuthBloc.of(context).logout();
   }

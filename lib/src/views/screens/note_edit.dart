@@ -1,8 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:safestore/src/blocs/notes_bloc.dart';
 import 'package:safestore/src/blocs/store_bloc.dart';
 import 'package:safestore/src/models/note.dart';
 
@@ -35,7 +33,7 @@ class NoteEditDialog extends StatelessWidget {
       child: Scaffold(
         appBar: buildAppBar(context),
         body: buildForm(context),
-        floatingActionButton: buildFAB(),
+        floatingActionButton: buildFAB(context),
       ),
     );
   }
@@ -43,7 +41,7 @@ class NoteEditDialog extends StatelessWidget {
   Widget buildAppBar(BuildContext context) {
     return AppBar(
       title: Text(
-        note.updateTime != note.createTime ? 'Edit Note' : 'New Note',
+        note.updatedAt != note.createdAt ? 'Edit Note' : 'New Note',
         style: GoogleFonts.baloo(),
       ),
       actions: <Widget>[
@@ -55,14 +53,10 @@ class NoteEditDialog extends StatelessWidget {
     );
   }
 
-  Widget buildFAB() {
-    return BlocBuilder<NoteBloc, NoteState>(
-      builder: (context, state) {
-        return FloatingActionButton(
-          child: state.saving ? CircularProgressIndicator() : Icon(Icons.save),
-          onPressed: () => handleSubmit(context),
-        );
-      },
+  Widget buildFAB(BuildContext context) {
+    return FloatingActionButton(
+      child: Icon(Icons.save),
+      onPressed: () => handleSubmit(context),
     );
   }
 
@@ -108,7 +102,9 @@ class NoteEditDialog extends StatelessWidget {
 
   void handleSubmit(BuildContext context) async {
     // validity check
-    if (titleController.text.isEmpty) {
+    final title = titleController.text.trim();
+    final body = bodyController.text.trim();
+    if (title.isEmpty) {
       return showDialog(
         context: context,
         child: AlertDialog(
@@ -123,13 +119,12 @@ class NoteEditDialog extends StatelessWidget {
         ),
       );
     }
+
     // save and close
-    final state = NoteBloc.of(context).state;
-    if (state.saving) return;
-    note.title = titleController.text;
-    note.body = bodyController.text;
-    await NoteBloc.of(context).saveNote(note);
-    StoreBloc.of(context).sync(); // do a sync
+    final state = StoreBloc.of(context).state;
+    note.title = title;
+    note.body = body;
+    state.storage.save(note);
     Navigator.of(context).pop();
   }
 
@@ -152,8 +147,8 @@ class NoteEditDialog extends StatelessWidget {
       ),
     );
     if (confirm) {
-      await NoteBloc.of(context).deleteNote(note);
-      StoreBloc.of(context).sync(); // do a sync
+      final state = StoreBloc.of(context).state;
+      state.storage.delete(note);
       Navigator.of(context).pop();
     }
   }

@@ -1,43 +1,65 @@
-import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
+import 'package:meta/meta.dart';
 import 'package:safestore/src/services/crypto.dart';
 
 abstract class Serializable {
+  static final int _version = 1;
+
   String _id;
-  num _createTime;
-  num _updateTime;
-  bool _trashed = false;
+  int _updatedAt;
+  int _deletedAt;
+  int _createdAt;
+  bool _deleted = false;
 
   String get id => _id;
 
-  bool get trashed => _trashed;
+  bool get deleted => _deleted;
 
-  DateTime get createTime => DateTime.fromMillisecondsSinceEpoch(_createTime);
+  DateTime get createdAt => DateTime.fromMillisecondsSinceEpoch(_createdAt);
 
-  DateTime get updateTime => DateTime.fromMillisecondsSinceEpoch(_updateTime);
+  DateTime get updatedAt => DateTime.fromMillisecondsSinceEpoch(_updatedAt);
 
-  set updateTime(DateTime time) => _updateTime = time.millisecondsSinceEpoch;
+  DateTime get deletedAt => DateTime.fromMillisecondsSinceEpoch(_deletedAt);
 
   Serializable() : this.id(Crypto.generateId());
 
   Serializable.id(this._id)
-      : _createTime = DateTime.now().millisecondsSinceEpoch,
-        _updateTime = DateTime.now().millisecondsSinceEpoch;
+      : _createdAt = DateTime.now().millisecondsSinceEpoch,
+        _updatedAt = DateTime.now().millisecondsSinceEpoch;
 
   @mustCallSuper
-  void fromJson(Map<String, dynamic> data) {
-    _id = data['id'];
-    _trashed = data['trashed'];
-    _createTime = data['create_time'];
-    _updateTime = data['update_time'];
+  void write(BinaryWriter writer) {
+    writer.writeInt(_version);
+    writer.writeString(_id);
+    writer.writeInt(_createdAt);
+    writer.writeInt(_updatedAt);
+    writer.writeBool(_deleted);
+    writer.writeInt(_deletedAt ?? 0);
   }
 
   @mustCallSuper
-  Map<String, dynamic> toJson() {
-    final data = Map<String, dynamic>();
-    data['id'] = _id;
-    data['trashed'] = _trashed;
-    data['create_time'] = _createTime;
-    data['update_time'] = _updateTime;
-    return data;
+  void read(BinaryReader reader) {
+    int version = reader.readInt();
+    switch (version) {
+      case 1:
+        _id = reader.readString();
+        _createdAt = reader.readInt();
+        _updatedAt = reader.readInt();
+        _deleted = reader.readBool();
+        _deletedAt = reader.readInt();
+        break;
+
+      default:
+        throw ArgumentError.value(version, 'version', 'Unknown version');
+    }
+  }
+
+  void setUpdateTime() {
+    _updatedAt = DateTime.now().millisecondsSinceEpoch;
+  }
+
+  void markAsDeleted() {
+    _deleted = true;
+    _deletedAt = DateTime.now().millisecondsSinceEpoch;
   }
 }
