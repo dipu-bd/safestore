@@ -9,6 +9,8 @@ MKDIR := mkdir
 COPY := copy
 DELETE := del
 KEYSTORE := "android\app\.keystore"
+APK_OUTPUT := "build\app\outputs\apk\release\app-release.apk"
+APK_RELEASE := "build\Safestore.apk"
 else
 HOME := $(shell cd ~ && pwd)
 RMDIR := rm -rf
@@ -16,6 +18,8 @@ MKDIR := mkdir -p
 COPY := cp
 DELETE := rm -f
 KEYSTORE := "android/app/.keystore"
+APK_OUTPUT := "build/app/outputs/apk/release/app-release.apk"
+APK_RELEASE := "build/Safestore.apk"
 endif
 
 debug-key :: # To get the debug certificate fingerprint:
@@ -52,3 +56,9 @@ generate-key :: # To generate new key-pair
 		-keypass $(PASSWORD) \
 		-keystore $(KEYSTORE) \
 		-dname "CN=Admin, OU=Safestore, O=Bitanon, L=Dhaka, S=Dhaka, C=BD"
+
+android ::
+	@flutter clean
+	@flutter pub get
+	@flutter build apk
+	@$(COPY) $(APK_OUTPUT) $(APK_RELEASE)
