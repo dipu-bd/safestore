@@ -1,4 +1,4 @@
-name: Flutter Release
+name: Flutter Release APK
 
 on:
   push:
@@ -8,6 +8,7 @@ on:
 
 jobs:
   build:
+    name: Build APK
     runs-on: ubuntu-latest
 
     container:
@@ -15,8 +16,17 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - name: Build for android
-        run: make android
+      
+      - uses: actions/setup-java@v1
+        with:
+          java-version: '12.x'
+      
+      - uses: subosito/flutter-action@v1
+        with:
+          channel: 'stable'
+      - run: flutter pub get
+      - run: flutter build apk
+      
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -27,6 +37,7 @@ jobs:
           release_name: Release ${{ github.ref }}
           draft: false
           prerelease: false
+      
       - name: Upload Release Asset
         id: upload-release-asset 
         uses: actions/upload-release-asset@v1
@@ -34,6 +45,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-          asset_path: build/Safestore.apk
+          asset_path: build/app/outputs/apk/release/app-release.apk
           asset_name: Safestore.apk
           asset_content_type: application/apk
