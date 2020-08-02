@@ -17,19 +17,20 @@ class SecureStorage {
   static final updateTimeKey = 'update_time';
   final _store = FlutterSecureStorage();
 
-  Future<Map<String, Map<String, dynamic>>> listAll([
+  Future<List<Map<String, dynamic>>> listAll([
     bool includeTrash = false,
   ]) async {
     final Map<String, String> all = await _store.readAll();
-    final result = Map<String, Map<String, dynamic>>();
+    final entries = List<Map<String, dynamic>>();
     all.keys.forEach((key) {
       if (key == updateTimeKey) return;
       final Map<String, dynamic> value = json.decode(all[key]);
       if (includeTrash || !(value['trashed'] ?? false)) {
-        result[key] = value;
+        entries.add(value);
       }
     });
-    return result;
+    entries.sort((a, b) => a['create_time'] - b['create_time']);
+    return entries;
   }
 
   Future<Map<String, dynamic>> open(String id) async {
@@ -61,10 +62,9 @@ class SecureStorage {
   // ---------------------------------------------------------------------------
 
   Future<Uint8List> export() async {
-    final Map<String, dynamic> all = await listAll();
     log('Exporting at ${DateTime.now()}', name: '$this');
     final Map<String, dynamic> data = {
-      'all': all,
+      'all': await listAll(),
       exportTimeKey: DateTime.now().millisecondsSinceEpoch,
     };
     return utf8.encode(json.encode(data));
@@ -78,11 +78,13 @@ class SecureStorage {
     log('Importing data with export time $exportDate', name: '$this');
 
     // The entity list to import
-    final Map<String, dynamic> entities = data['all'] ?? {};
+    final Map<String, dynamic> entities = Map.fromEntries(
+      (data['all'] as List ?? []).map((e) => MapEntry(e['id'], e)),
+    );
 
     // Read currently available data
     final all = await _store.readAll();
-    final updateTime = num.tryParse(await _store.read(key: updateTimeKey)) ?? 0;
+    final updateTime = num.parse(await _store.read(key: updateTimeKey) ?? '0');
     final updateDate = DateTime.fromMillisecondsSinceEpoch(updateTime);
     log('Last update time $updateDate', name: '$this');
 

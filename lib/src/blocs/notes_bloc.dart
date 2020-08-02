@@ -58,7 +58,7 @@ class NoteBloc extends Bloc<NoteEvent, NoteState> {
       notify();
 
       final all = await SecureStorage().listAll();
-      state.notes = all.values.map((e) => Note()..fromJson(e)).toList();
+      state.notes = all.map((e) => Note()..fromJson(e)).toList();
     } catch (err, stack) {
       log('$err', stackTrace: stack, name: '$this');
       state.loadError = '$err';
