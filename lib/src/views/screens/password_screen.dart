@@ -63,15 +63,16 @@ class PasswordScreen extends StatelessWidget {
 
   Widget buildPasswordForm(BuildContext context) {
     final auth = AuthBloc.of(context).state;
+    if (auth.email == null || auth.picture == null || auth.username == null) {
+      return Container();
+    }
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        auth.picture != null
-            ? CircleAvatar(
-                radius: 64,
-                backgroundImage: CachedNetworkImageProvider(auth.picture),
-              )
-            : Container(),
+        CircleAvatar(
+          radius: 64,
+          backgroundImage: CachedNetworkImageProvider(auth.picture),
+        ),
         SizedBox(height: 10),
         Text(
           auth.username,

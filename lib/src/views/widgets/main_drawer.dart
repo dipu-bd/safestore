@@ -71,7 +71,7 @@ class MainDrawer extends StatelessWidget {
       children: <Widget>[
         buildLabel(context, null),
         buildLabel(context, 'Archived'),
-        Divider(),
+        labels.isNotEmpty ? Divider() : Container(),
         ...labels.map((label) => buildLabel(context, label)),
         Divider(),
         buildLabel(context, 'Statistics'),
