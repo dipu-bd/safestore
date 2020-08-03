@@ -7,24 +7,13 @@ import 'package:safestore/src/utils/extensions.dart';
 class ByteBufferReader extends BufferReader {
   final Uint8List _buffer;
   final ByteData _byteData;
-  final int _bufferLength;
 
   int _bufferLimit;
   int _offset = 0;
 
-  void _limitAvailableBytes(int bytes) {
-    _requireBytes(bytes);
-    _bufferLimit = _offset + bytes;
-  }
-
-  void _resetLimit() {
-    _bufferLimit = _bufferLength;
-  }
-
   /// Not part of public API
   ByteBufferReader(this._buffer, [int bufferLength])
       : _byteData = ByteData.view(_buffer.buffer, _buffer.offsetInBytes),
-        _bufferLength = bufferLength ?? _buffer.length,
         _bufferLimit = bufferLength ?? _buffer.length;
 
   @pragma('vm:prefer-inline')
@@ -87,6 +76,13 @@ class ByteBufferReader extends BufferReader {
     return _byteData.getInt32(_offset - 4, Endian.little);
   }
 
+  @override
+  int readInt64() {
+    _requireBytes(8);
+    _offset += 8;
+    return _byteData.getInt64(_offset - 8, Endian.little);
+  }
+
   @pragma('vm:prefer-inline')
   @pragma('dart2js:tryInline')
   @override
@@ -100,6 +96,26 @@ class ByteBufferReader extends BufferReader {
   int peekUint32() {
     _requireBytes(4);
     return _buffer.readUint32(_offset);
+  }
+
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
+  @override
+  BigInt readBigInt() {
+    var bitLength = readUint32();
+    var sign = bitLength.sign;
+    if (sign < 0) {
+      bitLength = -bitLength;
+    }
+    _requireBytes((bitLength / 8).ceil());
+    var value = BigInt.zero;
+    for (int i = 0; i < bitLength; i += 8) {
+      value |= BigInt.from(_buffer[_offset++]) << i;
+    }
+    if (sign < 0) {
+      value = -value;
+    }
+    return value;
   }
 
   @override

@@ -17,6 +17,9 @@ abstract class BufferWriter {
   /// Write a 32-bit unsigned integer as four bytes.
   void writeUint32(int value);
 
+  /// Write a [BigInt] integer.
+  void writeBigInt(BigInt value);
+
   /// Write a 64-bit signed integer as eight bytes.
   void writeInt(int value);
 

@@ -74,6 +74,9 @@ class ByteBufferWriter extends BufferWriter {
 
   @override
   void writeWord(int value) {
+    if (value == null) {
+      throw ArgumentError.notNull();
+    }
     _reserveBytes(2);
     _buffer[_offset++] = value;
     _buffer[_offset++] = value >> 8;
@@ -93,13 +96,39 @@ class ByteBufferWriter extends BufferWriter {
   @pragma('dart2js:tryInline')
   @override
   void writeUint32(int value) {
+    if (value == null) {
+      throw ArgumentError.notNull();
+    }
     _reserveBytes(4);
     _buffer.writeUint32(_offset, value);
     _offset += 4;
   }
 
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
+  @override
+  void writeBigInt(BigInt value) {
+    if (value == null) {
+      throw ArgumentError.notNull();
+    }
+    var length = value.bitLength;
+    if (value.sign < 0) {
+      length = -length;
+      value = -value;
+    }
+    writeInt32(length);
+    _reserveBytes((value.bitLength / 8).ceil());
+    for (var i = 0; i < value.bitLength; i++) {
+      _buffer[_offset++] = value.toUnsigned(8).toInt();
+      value >>= 8;
+    }
+  }
+
   @override
   void writeInt(int value) {
+    if (value == null) {
+      throw ArgumentError.notNull();
+    }
     writeDouble(value.toDouble());
   }
 
@@ -115,6 +144,9 @@ class ByteBufferWriter extends BufferWriter {
 
   @override
   void writeBool(bool value) {
+    if (value == null) {
+      throw ArgumentError.notNull();
+    }
     writeByte(value ? 1 : 0);
   }
 
@@ -124,6 +156,9 @@ class ByteBufferWriter extends BufferWriter {
     bool writeByteCount = true,
     Converter<String, List<int>> encoder = BufferWriter.utf8Encoder,
   }) {
+    if (value == null) {
+      throw ArgumentError.notNull();
+    }
     var bytes = encoder.convert(value);
     if (writeByteCount) {
       writeUint32(bytes.length);
@@ -133,6 +168,9 @@ class ByteBufferWriter extends BufferWriter {
 
   @override
   void writeByteList(List<int> bytes, {bool writeLength = true}) {
+    if (bytes == null) {
+      throw ArgumentError.notNull();
+    }
     if (writeLength) {
       writeUint32(bytes.length);
     }
@@ -141,6 +179,9 @@ class ByteBufferWriter extends BufferWriter {
 
   @override
   void writeIntList(List<int> list, {bool writeLength = true}) {
+    if (list == null) {
+      throw ArgumentError.notNull();
+    }
     var length = list.length;
     if (writeLength) {
       writeUint32(length);
@@ -155,6 +196,9 @@ class ByteBufferWriter extends BufferWriter {
 
   @override
   void writeDoubleList(List<double> list, {bool writeLength = true}) {
+    if (list == null) {
+      throw ArgumentError.notNull();
+    }
     var length = list.length;
     if (writeLength) {
       writeUint32(length);
@@ -169,6 +213,9 @@ class ByteBufferWriter extends BufferWriter {
 
   @override
   void writeBoolList(List<bool> list, {bool writeLength = true}) {
+    if (list == null) {
+      throw ArgumentError.notNull();
+    }
     var length = list.length;
     if (writeLength) {
       writeUint32(length);
@@ -185,6 +232,9 @@ class ByteBufferWriter extends BufferWriter {
     bool writeLength = true,
     Converter<String, List<int>> encoder = BufferWriter.utf8Encoder,
   }) {
+    if (list == null) {
+      throw ArgumentError.notNull();
+    }
     if (writeLength) {
       writeUint32(list.length);
     }

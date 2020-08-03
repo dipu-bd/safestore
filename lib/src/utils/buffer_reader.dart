@@ -35,6 +35,9 @@ abstract class BufferReader {
   /// Read four bytes as 32-bit unsigned integer.
   int readUint32();
 
+  /// Read a [BigInt].
+  BigInt readBigInt();
+
   /// Read eight bytes as 64-bit signed integer.
   int readInt();
 
