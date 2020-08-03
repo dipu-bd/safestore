@@ -64,18 +64,9 @@ class GoogleDrive {
     return drive;
   }
 
-  Future<DriveApi> getDrive() async {
+  Future<DriveApi> getDrive() {
     if (_driveApiFuture == null) {
       _driveApiFuture = initDrive();
-    }
-    for (int retry = 0; retry < 3; ++retry) {
-      try {
-        await _driveApiFuture;
-        break;
-      } catch (err, stack) {
-        log('$err', stackTrace: stack, name: '$this');
-        _driveApiFuture = initDrive();
-      }
     }
     return _driveApiFuture;
   }

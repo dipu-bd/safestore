@@ -1,9 +1,9 @@
-import 'dart:convert';
 import 'dart:developer';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:googleapis/drive/v3.dart';
 import 'package:safestore/src/services/compress.dart';
 import 'package:safestore/src/services/crypto.dart';
 import 'package:safestore/src/services/google_drive.dart';
@@ -30,6 +30,7 @@ class StoreState {
 
   String lastDriveMd5;
   String lastDataMd5;
+  int driveFileSize;
 
   @override
   int get hashCode => super.hashCode;
@@ -92,8 +93,7 @@ class StoreBloc extends Bloc<StoreEvent, StoreState> {
       notify();
 
       state.passwordHash = Crypto.hashPassword(plainPassword);
-      final name = Crypto.makeHash(state.passwordHash, 5);
-      state.binName = base64.encode(name).replaceAll('/', '_');
+      state.binName = Crypto.md5(state.passwordHash);
 
       log('Opening bin "${state.binName}"', name: '$this');
       state.storage?.close();
@@ -150,16 +150,21 @@ class StoreBloc extends Bloc<StoreEvent, StoreState> {
 
       // now try to exporting
       final data = state.storage.export();
-      final checksum = Crypto.md5sum(data);
+      final checksum = Crypto.md5(data);
       if (checksum != state.lastDataMd5) {
         final compressed = Compression.compress(data); // before encrypt
         final cipher = Crypto.encrypt(compressed, state.passwordHash);
         await GoogleDrive().uploadFile(file, cipher);
         state.lastDataMd5 = checksum;
+        state.driveFileSize = cipher.length;
       }
 
       state.lastSync = DateTime.now().millisecondsSinceEpoch;
     } catch (err, stack) {
+      if (err is ApiRequestError) {
+        GoogleDrive().signOut();
+        return sync();
+      }
       log('$err', stackTrace: stack, name: '$this');
       state.syncError = '$err';
     } finally {

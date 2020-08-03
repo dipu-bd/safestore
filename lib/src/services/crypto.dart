@@ -34,27 +34,27 @@ abstract class Crypto {
 
   // ---------------------------------------------------------------------------
 
-  static Uint8List makeHash(Uint8List data, [int iteration = 1]) {
-    final digest = SHA256Digest();
-    for (int i = 0; i < iteration; ++i) {
-      data = digest.process(data);
-    }
-    return data;
-  }
-
   static String generateId() {
     final clock = DateTime.now().microsecondsSinceEpoch;
     final random = generateRandom(128);
     random.buffer.asByteData().setUint64(0, clock);
-    return base64.encode(random);
+    return sha256(random);
   }
 
-  // ---------------------------------------------------------------------------
+  static String sha256(Uint8List data, [int iteration = 1]) {
+    final digest = SHA256Digest();
+    for (int i = 0; i < iteration; ++i) {
+      data = digest.process(data);
+    }
+    return hex.encode(data);
+  }
 
-  static String md5sum(Iterable<int> data) {
+  static String md5(Iterable<int> data, [int iteration = 1]) {
     final md5 = MD5Digest();
-    final sum = md5.process(Uint8List.fromList(data));
-    return hex.encode(sum);
+    for (int i = 0; i < iteration; ++i) {
+      data = md5.process(Uint8List.fromList(data));
+    }
+    return hex.encode(data);
   }
 
   // ---------------------------------------------------------------------------

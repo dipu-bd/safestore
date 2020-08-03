@@ -1,8 +1,9 @@
 import 'dart:async';
-import 'dart:developer';
 import 'dart:typed_data';
 
-import 'package:safestore/src/models/note.dart';
+import 'package:safestore/src/models/group.dart';
+import 'package:safestore/src/models/serializable.dart';
+import 'package:safestore/src/models/simple_note.dart';
 import 'package:safestore/src/utils/byte_buffer_reader.dart';
 import 'package:safestore/src/utils/byte_buffer_writer.dart';
 
@@ -17,34 +18,52 @@ class NoteStorage {
 
   // ---------------------------------------------------------------------------
 
-  static final int _version = 1;
+  static final int _version = 2;
+
   int _updatedAt = 0;
-  final _notes = Map<String, Note>();
+  Map<String, Serializable> _items = {};
 
-  Note find(String id) => _notes[id];
+  T find<T extends Serializable>(String id) => _items[id];
 
-  List<Note> finalAll() => _notes.values.toList();
+  void save<T extends Serializable>(T item) {
+    item.notifyUpdate();
+    _items[item.id] = item;
+    _updatedAt = DateTime.now().millisecondsSinceEpoch;
+    _updateStream.sink.add(this);
+  }
 
-  List<Note> findByText(String query) => _notes.values.where((note) {
-        return (query ?? '').trim().split(' ').any((q) {
-          return q.trim().isNotEmpty &&
-              (note.title.contains(q) || note.body.contains(q));
-        });
+  void delete<T extends Serializable>(T note) {
+    note.notifyUpdate();
+    _items.remove(note.id);
+    _updatedAt = DateTime.now().millisecondsSinceEpoch;
+    _updateStream.sink.add(this);
+  }
+
+  List<T> findAll<T extends Serializable>([bool Function(T item) predicate]) {
+    predicate ??= (_) => true;
+    return _items.values
+        .where((e) => e.runtimeType == T)
+        .map((e) => e as T)
+        .where(predicate)
+        .toList();
+  }
+
+  // ---------------------------------------------------------------------------
+
+  List<SimpleNote> notes({bool includeTrash = false}) =>
+      findAll((note) => includeTrash || !note.deleted);
+
+  List<Group> groups({bool includeTrash = false}) =>
+      findAll((group) => includeTrash || !group.deleted)
+        ..insert(0, Group.ungrouped);
+
+  List<SimpleNote> notesByGroup(String groupId, {bool includeTrash = false}) =>
+      findAll((note) {
+        if (!includeTrash && note.deleted) return false;
+        return groupId == null || note.groups.contains(groupId);
       });
 
-  void save(Note note) {
-    note.notifyUpdate();
-    _notes[note.id] = note;
-    _updatedAt = DateTime.now().millisecondsSinceEpoch;
-    _updateStream.sink.add(this);
-  }
-
-  void delete(Note note) {
-    note.notifyUpdate();
-    _notes.remove(note.id);
-    _updatedAt = DateTime.now().millisecondsSinceEpoch;
-    _updateStream.sink.add(this);
-  }
+  Group findGroup(String id) => find(id) ?? Group.ungrouped;
 
   // ---------------------------------------------------------------------------
 
@@ -52,8 +71,8 @@ class NoteStorage {
     final writer = ByteBufferWriter();
     writer.writeInt(_version);
     writer.writeInt(_updatedAt);
-    writer.writeInt(_notes.length);
-    _notes.values.forEach((note) => note.write(writer));
+    writer.writeInt(_items.length);
+    _items.values.forEach((item) => item.write(writer));
     return writer.toBytes();
   }
 
@@ -62,15 +81,22 @@ class NoteStorage {
     switch (reader.readInt()) {
       case 1:
         int updateTime = reader.readInt();
-        if (updateTime < _updatedAt) {
-          log('Discarding older import request', name: '$this');
-          return;
-        }
-        _notes.clear();
+        if (updateTime < _updatedAt) return; // imported data is older
+        int length = reader.readInt();
+        final entries = List<Serializable>.filled(length, SimpleNote())
+            .map((item) => item..read(reader))
+            .map((e) => MapEntry(e.id, e));
+        _items = Map.fromEntries(entries);
+        break;
+
+      case 2:
+        int updateTime = reader.readInt();
+        if (updateTime < _updatedAt) return; // imported data is older
+        _items.clear();
         int length = reader.readInt();
         for (int i = 0; i < length; ++i) {
-          final note = Note()..read(reader);
-          _notes[note.id] = note;
+          final note = SimpleNote()..read(reader);
+          _items[note.id] = note;
         }
         break;
 
@@ -78,4 +104,11 @@ class NoteStorage {
         throw ArgumentError('Unknown version');
     }
   }
+
+// ---------------------------------------------------------------------------
+
+  int get totalItems => _items.length;
+
+  DateTime get lastSyncTime =>
+      DateTime.fromMillisecondsSinceEpoch(_updatedAt ?? 0);
 }
