@@ -21,6 +21,8 @@ class ByteBufferReader extends BufferReader {
   @override
   int get availableBytes => _bufferLimit - _offset;
 
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
   @override
   int get usedBytes => _offset;
 
@@ -51,36 +53,85 @@ class ByteBufferReader extends BufferReader {
   @pragma('vm:prefer-inline')
   @pragma('dart2js:tryInline')
   @override
+  int peekByte() {
+    _requireBytes(1);
+    return _buffer[_offset];
+  }
+
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
+  @override
   Uint8List viewBytes(int bytes) {
     _requireBytes(bytes);
     _offset += bytes;
     return _buffer.view(_offset - bytes, bytes);
   }
 
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
   @override
   Uint8List peekBytes(int bytes) {
     _requireBytes(bytes);
     return _buffer.view(_offset, bytes);
   }
 
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
   @override
-  int readWord() {
+  int readUint8() {
+    return readByte();
+  }
+
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
+  @override
+  int peekUint8() {
+    return peekByte();
+  }
+
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
+  @override
+  int readInt8() {
+    return readUint8().toSigned(8);
+  }
+
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
+  @override
+  int peekInt8() {
+    return peekUint8().toSigned(8);
+  }
+
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
+  @override
+  int readUint16() {
     _requireBytes(2);
-    return _buffer[_offset++] | _buffer[_offset++] << 8;
+    _offset += 2;
+    return _buffer[_offset - 2] | _buffer[_offset - 1] << 8;
   }
 
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
   @override
-  int readInt32() {
-    _requireBytes(4);
-    _offset += 4;
-    return _byteData.getInt32(_offset - 4, Endian.little);
+  int peekUint16() {
+    _requireBytes(2);
+    return _buffer[_offset] | _buffer[_offset + 1] << 8;
   }
 
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
   @override
-  int readInt64() {
-    _requireBytes(8);
-    _offset += 8;
-    return _byteData.getInt64(_offset - 8, Endian.little);
+  int readInt16() {
+    return readUint16().toSigned(16);
+  }
+
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
+  @override
+  int peekInt16() {
+    return peekUint16().toSigned(16);
   }
 
   @pragma('vm:prefer-inline')
@@ -92,7 +143,9 @@ class ByteBufferReader extends BufferReader {
     return _buffer.readUint32(_offset - 4);
   }
 
-  /// Not part of public API
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
+  @override
   int peekUint32() {
     _requireBytes(4);
     return _buffer.readUint32(_offset);
@@ -101,39 +154,60 @@ class ByteBufferReader extends BufferReader {
   @pragma('vm:prefer-inline')
   @pragma('dart2js:tryInline')
   @override
-  BigInt readBigInt() {
-    var bitLength = readUint32();
-    var sign = bitLength.sign;
-    if (sign < 0) {
-      bitLength = -bitLength;
-    }
-    _requireBytes((bitLength / 8).ceil());
-    var value = BigInt.zero;
-    for (int i = 0; i < bitLength; i += 8) {
-      value |= BigInt.from(_buffer[_offset++]) << i;
-    }
-    if (sign < 0) {
-      value = -value;
-    }
-    return value;
+  int readInt32() {
+    return readUint32().toSigned(32);
   }
 
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
+  @override
+  int peekInt32() {
+    return peekUint32().toSigned(32);
+  }
+
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
   @override
   int readInt() {
     return readDouble().toInt();
   }
 
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
+  @override
+  int peekInt() {
+    return peekDouble().toInt();
+  }
+
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
   @override
   double readDouble() {
-    _requireBytes(8);
-    var value = _byteData.getFloat64(_offset, Endian.little);
+    var value = peekDouble();
     _offset += 8;
     return value;
   }
 
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
+  @override
+  double peekDouble() {
+    _requireBytes(8);
+    return _byteData.getFloat64(_offset, Endian.little);
+  }
+
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
   @override
   bool readBool() {
     return readByte() > 0;
+  }
+
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
+  @override
+  bool peekBool() {
+    return peekByte() > 0;
   }
 
   @override
@@ -201,5 +275,23 @@ class ByteBufferReader extends BufferReader {
       list[i] = readString(null, decoder);
     }
     return list;
+  }
+
+  @override
+  BigInt readBigInt() {
+    var bitLength = readInt32();
+    var sign = bitLength.sign;
+    if (sign < 0) {
+      bitLength = -bitLength;
+    }
+    _requireBytes((bitLength / 8).ceil());
+    var value = BigInt.zero;
+    for (int i = 0; i < bitLength; i += 8) {
+      value |= BigInt.from(_buffer[_offset++]) << i;
+    }
+    if (sign < 0) {
+      value = -value;
+    }
+    return value;
   }
 }

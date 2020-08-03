@@ -13,6 +13,13 @@ class ByteBufferWriter extends BufferWriter {
 
   int _offset = 0;
 
+  /// Not part of public API
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
+  Uint8List toBytes() {
+    return Uint8List.view(_buffer.buffer, 0, _offset);
+  }
+
   @pragma('vm:prefer-inline')
   @pragma('dart2js:tryInline')
   ByteData get _byteData {
@@ -54,7 +61,7 @@ class ByteBufferWriter extends BufferWriter {
 
   @pragma('vm:prefer-inline')
   @pragma('dart2js:tryInline')
-  void _addBytes(List<int> bytes) {
+  void _addBytes(Iterable<int> bytes) {
     var length = bytes.length;
     _reserveBytes(length);
     _buffer.setRange(_offset, _offset + length, bytes);
@@ -65,40 +72,47 @@ class ByteBufferWriter extends BufferWriter {
   @pragma('dart2js:tryInline')
   @override
   void writeByte(int byte) {
-    if (byte == null) {
-      throw ArgumentError.notNull();
-    }
+    byte ??= 0;
     _reserveBytes(1);
     _buffer[_offset++] = byte;
   }
 
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
   @override
-  void writeWord(int value) {
-    if (value == null) {
-      throw ArgumentError.notNull();
-    }
+  void writeUint8(int value) {
+    writeByte(value);
+  }
+
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
+  @override
+  void writeInt8(int value) {
+    writeUint8(value);
+  }
+
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
+  @override
+  void writeUint16(int value) {
+    value ??= 0;
     _reserveBytes(2);
     _buffer[_offset++] = value;
     _buffer[_offset++] = value >> 8;
   }
 
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
   @override
-  void writeInt32(int value) {
-    if (value == null) {
-      throw ArgumentError.notNull();
-    }
-    _reserveBytes(4);
-    _byteData.setInt32(_offset, value, Endian.little);
-    _offset += 4;
+  void writeInt16(int value) {
+    writeUint16(value);
   }
 
   @pragma('vm:prefer-inline')
   @pragma('dart2js:tryInline')
   @override
   void writeUint32(int value) {
-    if (value == null) {
-      throw ArgumentError.notNull();
-    }
+    value ??= 0;
     _reserveBytes(4);
     _buffer.writeUint32(_offset, value);
     _offset += 4;
@@ -107,46 +121,33 @@ class ByteBufferWriter extends BufferWriter {
   @pragma('vm:prefer-inline')
   @pragma('dart2js:tryInline')
   @override
-  void writeBigInt(BigInt value) {
-    if (value == null) {
-      throw ArgumentError.notNull();
-    }
-    var length = value.bitLength;
-    if (value.sign < 0) {
-      length = -length;
-      value = -value;
-    }
-    writeInt32(length);
-    _reserveBytes((value.bitLength / 8).ceil());
-    for (var i = 0; i < value.bitLength; i++) {
-      _buffer[_offset++] = value.toUnsigned(8).toInt();
-      value >>= 8;
-    }
+  void writeInt32(int value) {
+    writeUint32(value);
   }
 
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
   @override
   void writeInt(int value) {
-    if (value == null) {
-      throw ArgumentError.notNull();
-    }
+    value ??= 0;
     writeDouble(value.toDouble());
   }
 
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
   @override
   void writeDouble(double value) {
-    if (value == null) {
-      throw ArgumentError.notNull();
-    }
+    value ??= 0;
     _reserveBytes(8);
     _byteData.setFloat64(_offset, value, Endian.little);
     _offset += 8;
   }
 
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
   @override
   void writeBool(bool value) {
-    if (value == null) {
-      throw ArgumentError.notNull();
-    }
+    value ??= false;
     writeByte(value ? 1 : 0);
   }
 
@@ -156,49 +157,31 @@ class ByteBufferWriter extends BufferWriter {
     bool writeByteCount = true,
     Converter<String, List<int>> encoder = BufferWriter.utf8Encoder,
   }) {
-    if (value == null) {
-      throw ArgumentError.notNull();
-    }
+    value ??= '';
     var bytes = encoder.convert(value);
     if (writeByteCount) {
-      writeUint32(bytes.length);
+      writeInt32(bytes.length);
     }
     _addBytes(bytes);
   }
 
   @override
   void writeByteList(List<int> bytes, {bool writeLength = true}) {
-    if (bytes == null) {
-      throw ArgumentError.notNull();
-    }
+    bytes ??= [];
     if (writeLength) {
       writeUint32(bytes.length);
     }
-    _addBytes(bytes);
+    _addBytes(bytes.map((e) => e ?? 0));
   }
 
   @override
   void writeIntList(List<int> list, {bool writeLength = true}) {
-    if (list == null) {
-      throw ArgumentError.notNull();
-    }
-    var length = list.length;
-    if (writeLength) {
-      writeUint32(length);
-    }
-    _reserveBytes(length * 8);
-    var byteData = _byteData;
-    for (var i = 0; i < length; i++) {
-      byteData.setFloat64(_offset, list[i].toDouble(), Endian.little);
-      _offset += 8;
-    }
+    writeDoubleList(list?.map((e) => e?.toDouble())?.toList());
   }
 
   @override
   void writeDoubleList(List<double> list, {bool writeLength = true}) {
-    if (list == null) {
-      throw ArgumentError.notNull();
-    }
+    list ??= [];
     var length = list.length;
     if (writeLength) {
       writeUint32(length);
@@ -206,23 +189,21 @@ class ByteBufferWriter extends BufferWriter {
     _reserveBytes(length * 8);
     var byteData = _byteData;
     for (var i = 0; i < length; i++) {
-      byteData.setFloat64(_offset, list[i], Endian.little);
+      byteData.setFloat64(_offset, list[i] ?? 0, Endian.little);
       _offset += 8;
     }
   }
 
   @override
   void writeBoolList(List<bool> list, {bool writeLength = true}) {
-    if (list == null) {
-      throw ArgumentError.notNull();
-    }
+    list ??= [];
     var length = list.length;
     if (writeLength) {
       writeUint32(length);
     }
     _reserveBytes(length);
     for (var i = 0; i < length; i++) {
-      _buffer[_offset++] = list[i] ? 1 : 0;
+      _buffer[_offset++] = (list[i] ?? false) ? 1 : 0;
     }
   }
 
@@ -232,21 +213,31 @@ class ByteBufferWriter extends BufferWriter {
     bool writeLength = true,
     Converter<String, List<int>> encoder = BufferWriter.utf8Encoder,
   }) {
-    if (list == null) {
-      throw ArgumentError.notNull();
-    }
+    list ??= [];
     if (writeLength) {
       writeUint32(list.length);
     }
     for (var str in list) {
-      var strBytes = encoder.convert(str);
+      var strBytes = encoder.convert(str ?? '');
       writeUint32(strBytes.length);
       _addBytes(strBytes);
     }
   }
 
-  /// Not part of public API
-  Uint8List toBytes() {
-    return Uint8List.view(_buffer.buffer, 0, _offset);
+  @override
+  void writeBigInt(BigInt value) {
+    value ??= BigInt.zero;
+    if (value.sign < 0) {
+      value = -value;
+      writeInt32(-value.bitLength);
+    } else {
+      writeInt32(value.bitLength);
+    }
+    var length = value.bitLength;
+    _reserveBytes(length);
+    for (var i = 0; i < length; i += 8) {
+      _buffer[_offset++] = value.toUnsigned(8).toInt();
+      value >>= 8;
+    }
   }
 }
