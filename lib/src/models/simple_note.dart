@@ -7,7 +7,7 @@ class SimpleNote extends Serializable {
 
   String title;
   String body;
-  final groups = <String>[''].toSet();
+  final groups = Set<String>();
 
   @override
   void write(BufferWriter writer) {

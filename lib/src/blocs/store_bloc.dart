@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:googleapis/drive/v3.dart';
+import 'package:safestore/src/models/group.dart';
 import 'package:safestore/src/services/compress.dart';
 import 'package:safestore/src/services/crypto.dart';
 import 'package:safestore/src/services/google_drive.dart';
@@ -31,6 +32,8 @@ class StoreState {
   String lastDriveMd5;
   String lastDataMd5;
   int driveFileSize;
+
+  Group currentGroup;
 
   @override
   int get hashCode => super.hashCode;

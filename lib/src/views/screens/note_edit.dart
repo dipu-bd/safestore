@@ -31,8 +31,8 @@ class NoteEditDialog extends StatelessWidget {
       top: false,
       child: Scaffold(
         appBar: buildAppBar(context),
-        body: buildForm(context),
         floatingActionButton: buildFAB(context),
+        body: buildForm(context),
       ),
     );
   }
@@ -61,34 +61,38 @@ class NoteEditDialog extends StatelessWidget {
 
   Widget buildForm(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(10.0),
+      padding: EdgeInsets.zero,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          buildTitleField(),
-          Expanded(child: buildBodyField()),
+          buildTitleField(context),
+          Expanded(child: buildBodyField(context)),
         ],
       ),
     );
   }
 
-  Widget buildTitleField() {
+  Widget buildTitleField(BuildContext context) {
     return TextField(
       focusNode: titleFocus,
       controller: titleController,
-      style: GoogleFonts.delius(fontSize: 20, color: Colors.amber),
+      style: GoogleFonts.delius(
+        fontSize: 24,
+        color: Colors.amber,
+      ),
       textInputAction: TextInputAction.next,
       decoration: InputDecoration(
         filled: true,
-        fillColor: Colors.grey[850],
+        fillColor: Theme.of(context).scaffoldBackgroundColor,
         hintText: 'Title',
         border: InputBorder.none,
+        contentPadding: EdgeInsets.all(15).copyWith(bottom: 5),
       ),
       onSubmitted: (_) => bodyFocus.requestFocus(),
     );
   }
 
-  Widget buildBodyField() {
+  Widget buildBodyField(BuildContext context) {
     return TextField(
       maxLines: null,
       expands: true,
@@ -98,9 +102,10 @@ class NoteEditDialog extends StatelessWidget {
       style: GoogleFonts.delius(fontSize: 14),
       decoration: InputDecoration(
         filled: true,
-        fillColor: Colors.grey[850],
+        fillColor: Theme.of(context).scaffoldBackgroundColor,
         hintText: 'Your note here',
         border: InputBorder.none,
+        contentPadding: EdgeInsets.all(15).copyWith(top: 5),
       ),
     );
   }

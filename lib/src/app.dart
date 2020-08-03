@@ -23,7 +23,7 @@ class App extends StatelessWidget {
         theme: ThemeData.dark().copyWith(
           scaffoldBackgroundColor: Colors.grey[900],
           cardColor: Colors.grey[850],
-          primaryColor: Colors.blueGrey,
+          primaryColor: Colors.grey[800],
           accentColor: Colors.amber,
         ),
         home: BlocBuilder<AuthBloc, AuthState>(

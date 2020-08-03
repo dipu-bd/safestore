@@ -4,6 +4,7 @@ import 'package:safestore/src/blocs/store_bloc.dart';
 import 'package:safestore/src/models/simple_note.dart';
 import 'package:safestore/src/views/screens/note_edit.dart';
 import 'package:safestore/src/views/widgets/main_drawer.dart';
+import 'package:safestore/src/views/widgets/notes/note_card.dart';
 
 class HomeScreen extends StatelessWidget {
   @override
@@ -20,7 +21,8 @@ class HomeScreen extends StatelessWidget {
             child: Container(
               padding: EdgeInsets.all(5),
               constraints: BoxConstraints(
-                minHeight: MediaQuery.of(context).size.height - kToolbarHeight,
+                minHeight:
+                    MediaQuery.of(context).size.height - kToolbarHeight - 24,
               ),
               child: buildContent(context),
             ),
@@ -75,25 +77,7 @@ class HomeScreen extends StatelessWidget {
     }
     return Column(
       children: <Widget>[
-        ...notes.map((note) {
-          return Card(
-            child: ListTile(
-              title: Text(
-                note.title,
-                style: GoogleFonts.delius(fontSize: 20, color: Colors.amber),
-              ),
-              subtitle: note.body.isNotEmpty
-                  ? Text(
-                      note.body.length > 500
-                          ? note.body.substring(0, 500) + '...'
-                          : note.body,
-                      style: GoogleFonts.delius(fontSize: 14),
-                    )
-                  : null,
-              onTap: () => NoteEditDialog.show(context, note),
-            ),
-          );
-        }),
+        ...notes.map((note) => NoteCard(note)),
       ],
     );
   }

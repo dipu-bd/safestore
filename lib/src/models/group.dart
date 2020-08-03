@@ -1,22 +1,24 @@
-import 'package:flutter/painting.dart';
+import 'package:flutter/material.dart';
 import 'package:safestore/src/models/serializable.dart';
 import 'package:safestore/src/utils/buffer_reader.dart';
 import 'package:safestore/src/utils/buffer_writer.dart';
 
 class Group extends Serializable {
-  static final int _version = 1;
+  static final int _version = 2;
 
   String name;
-  Color color;
+  Color foreColor = Colors.white;
+  Color backColor = Colors.grey[800];
 
-  static final Group ungrouped = Group()..name = 'Ungrouped';
+  static Group get ungrouped => Group()..name = 'Ungrouped Notes';
 
   @override
   void write(BufferWriter writer) {
     super.write(writer);
     writer.writeInt(_version);
     writer.writeString(name);
-    writer.writeUint32(color.value);
+    writer.writeUint32(foreColor.value);
+    writer.writeUint32(backColor.value);
   }
 
   @override
@@ -25,7 +27,13 @@ class Group extends Serializable {
     switch (reader.readInt()) {
       case 1:
         name = reader.readString();
-        color = Color(reader.readUint32());
+        foreColor = Color(reader.readUint32());
+        break;
+
+      case 2:
+        name = reader.readString();
+        foreColor = Color(reader.readUint32());
+        backColor = Color(reader.readUint32());
         break;
 
       default:
