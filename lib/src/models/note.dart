@@ -1,5 +1,6 @@
-import 'package:hive/hive.dart';
 import 'package:safestore/src/models/serializable.dart';
+import 'package:safestore/src/utils/buffer_reader.dart';
+import 'package:safestore/src/utils/buffer_writer.dart';
 
 class Note extends Serializable {
   static final int _version = 1;
@@ -8,7 +9,7 @@ class Note extends Serializable {
   String body;
 
   @override
-  void write(BinaryWriter writer) {
+  void write(BufferWriter writer) {
     super.write(writer);
     writer.writeInt(_version);
     writer.writeString(title);
@@ -16,7 +17,7 @@ class Note extends Serializable {
   }
 
   @override
-  void read(BinaryReader reader) {
+  void read(BufferReader reader) {
     super.read(reader);
     int version = reader.readInt();
     switch (version) {
@@ -26,7 +27,7 @@ class Note extends Serializable {
         break;
 
       default:
-        throw ArgumentError.value(version, 'version', 'Unknown version');
+        throw ArgumentError('Unknown version $version');
     }
   }
 }

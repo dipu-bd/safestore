@@ -2,9 +2,9 @@ import 'dart:async';
 import 'dart:developer';
 import 'dart:typed_data';
 
-import 'package:hive/src/binary/binary_reader_impl.dart';
-import 'package:hive/src/binary/binary_writer_impl.dart';
 import 'package:safestore/src/models/note.dart';
+import 'package:safestore/src/utils/byte_buffer_reader.dart';
+import 'package:safestore/src/utils/byte_buffer_writer.dart';
 
 class NoteStorage {
   final _updateStream = StreamController<NoteStorage>.broadcast();
@@ -47,7 +47,7 @@ class NoteStorage {
   // ---------------------------------------------------------------------------
 
   Uint8List export() {
-    final writer = BinaryWriterImpl(null);
+    final writer = ByteBufferWriter();
     writer.writeInt(_version);
     writer.writeInt(_updatedAt);
     writer.writeInt(_notes.length);
@@ -56,7 +56,7 @@ class NoteStorage {
   }
 
   void import(Uint8List data) {
-    final reader = BinaryReaderImpl(data, null);
+    final reader = ByteBufferReader(data);
     int version = reader.readInt();
     switch (version) {
       case 1:
@@ -74,7 +74,7 @@ class NoteStorage {
         break;
 
       default:
-        throw ArgumentError.value(version, 'version', 'Unknown version');
+        throw ArgumentError('Unknown version $version');
     }
   }
 }

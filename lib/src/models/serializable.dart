@@ -1,6 +1,7 @@
-import 'package:hive/hive.dart';
 import 'package:meta/meta.dart';
 import 'package:safestore/src/services/crypto.dart';
+import 'package:safestore/src/utils/buffer_reader.dart';
+import 'package:safestore/src/utils/buffer_writer.dart';
 
 abstract class Serializable {
   static final int _version = 1;
@@ -28,7 +29,7 @@ abstract class Serializable {
         _updatedAt = DateTime.now().millisecondsSinceEpoch;
 
   @mustCallSuper
-  void write(BinaryWriter writer) {
+  void write(BufferWriter writer) {
     writer.writeInt(_version);
     writer.writeString(_id);
     writer.writeInt(_createdAt);
@@ -38,7 +39,7 @@ abstract class Serializable {
   }
 
   @mustCallSuper
-  void read(BinaryReader reader) {
+  void read(BufferReader reader) {
     int version = reader.readInt();
     switch (version) {
       case 1:
@@ -50,7 +51,7 @@ abstract class Serializable {
         break;
 
       default:
-        throw ArgumentError.value(version, 'version', 'Unknown version');
+        throw ArgumentError('Unknown version $version');
     }
   }
 
