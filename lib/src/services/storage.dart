@@ -83,8 +83,8 @@ class NoteStorage {
         int updateTime = reader.readInt();
         if (updateTime < _updatedAt) return; // imported data is older
         int length = reader.readInt();
-        final entries = List<Serializable>.filled(length, SimpleNote())
-            .map((item) => item..read(reader))
+        final entries = List<Serializable>.filled(length, null)
+            .map((item) => SimpleNote()..read(reader))
             .map((e) => MapEntry(e.id, e));
         _items = Map.fromEntries(entries);
         break;

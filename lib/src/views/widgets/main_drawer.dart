@@ -44,7 +44,7 @@ class MainDrawer extends StatelessWidget {
         child: Column(
           children: <Widget>[
             CircleAvatar(
-              radius: 64,
+              radius: 54,
               backgroundImage: CachedNetworkImageProvider(auth.picture),
             ),
             SizedBox(height: 10),
@@ -65,19 +65,6 @@ class MainDrawer extends StatelessWidget {
     );
   }
 
-  Widget buildBinImage(BuildContext context) {
-    final store = StoreBloc.of(context).state;
-    return Container(
-      alignment: Alignment.center,
-      padding: EdgeInsets.symmetric(horizontal: 15),
-      child: QrImage(
-        data: 'Bin: ${store.binName}',
-        backgroundColor: Colors.white,
-        size: 150,
-      ),
-    );
-  }
-
   Widget buildTextValue(String title, String value) {
     return Text.rich(
       TextSpan(children: [
@@ -90,7 +77,7 @@ class MainDrawer extends StatelessWidget {
           style: TextStyle(color: Colors.lime[100]),
         ),
       ]),
-      style: GoogleFonts.delius(fontSize: 14),
+      style: GoogleFonts.firaMono(fontSize: 14),
       textAlign: TextAlign.start,
     );
   }
@@ -101,24 +88,26 @@ class MainDrawer extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        buildTextValue('Bin Id', store.binName),
+        buildTextValue('Bin ID', store.binName),
         SizedBox(height: 8),
-        buildTextValue(
-          'Data volume',
-          formatFileSize(store.driveFileSize?.toDouble()),
-        ),
+        buildTextValue('Bin checksum (MD5)', store.lastDriveMd5),
         SizedBox(height: 8),
-        buildTextValue('Bin checksum', store.lastDriveMd5),
+        buildTextValue('Data size', formatFileSize(store.driveFileSize)),
         SizedBox(height: 8),
-        buildTextValue('Data checksum', store.lastDataMd5),
+        buildTextValue('Data checksum (MD5)', store.lastDataMd5),
+        SizedBox(height: 8),
+        buildTextValue('Total items', store.storage.totalItems.toString()),
         SizedBox(height: 8),
         buildTextValue('Last Synced', store.storage.lastSyncTime.toString()),
         SizedBox(height: 8),
-        buildTextValue('Total Items', store.storage.totalItems.toString()),
-        SizedBox(height: 8),
         Divider(),
+        buildTextValue('Password Hash', ''),
         SizedBox(height: 8),
-        buildBinImage(context),
+        QrImage(
+          data: String.fromCharCodes(store.passwordHash),
+          backgroundColor: Colors.white,
+          size: 160,
+        ),
       ],
     );
   }

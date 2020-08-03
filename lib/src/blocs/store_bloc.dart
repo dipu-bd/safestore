@@ -93,7 +93,7 @@ class StoreBloc extends Bloc<StoreEvent, StoreState> {
       notify();
 
       state.passwordHash = Crypto.hashPassword(plainPassword);
-      state.binName = Crypto.md5(state.passwordHash);
+      state.binName = Crypto.md5(state.passwordHash, 5);
 
       log('Opening bin "${state.binName}"', name: '$this');
       state.storage?.close();

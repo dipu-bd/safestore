@@ -46,7 +46,7 @@ abstract class Crypto {
     for (int i = 0; i < iteration; ++i) {
       data = digest.process(data);
     }
-    return hex.encode(data);
+    return base64.encode(data).replaceAll('/', '-');
   }
 
   static String md5(Iterable<int> data, [int iteration = 1]) {
