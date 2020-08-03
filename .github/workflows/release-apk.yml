@@ -20,7 +20,11 @@ jobs:
       - uses: subosito/flutter-action@v1
         with:
           channel: 'stable'
+
       - run: flutter pub get
+
+      - run: flutter test
+
       - run: flutter build apk
       
       - name: Create Release
