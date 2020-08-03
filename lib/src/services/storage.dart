@@ -33,12 +33,14 @@ class NoteStorage {
       });
 
   void save(Note note) {
+    note.notifyUpdate();
     _notes[note.id] = note;
     _updatedAt = DateTime.now().millisecondsSinceEpoch;
     _updateStream.sink.add(this);
   }
 
   void delete(Note note) {
+    note.notifyUpdate();
     _notes.remove(note.id);
     _updatedAt = DateTime.now().millisecondsSinceEpoch;
     _updateStream.sink.add(this);
@@ -57,8 +59,7 @@ class NoteStorage {
 
   void import(Uint8List data) {
     final reader = ByteBufferReader(data);
-    int version = reader.readInt();
-    switch (version) {
+    switch (reader.readInt()) {
       case 1:
         int updateTime = reader.readInt();
         if (updateTime < _updatedAt) {
@@ -74,7 +75,7 @@ class NoteStorage {
         break;
 
       default:
-        throw ArgumentError('Unknown version $version');
+        throw ArgumentError('Unknown version');
     }
   }
 }

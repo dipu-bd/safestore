@@ -19,15 +19,14 @@ class Note extends Serializable {
   @override
   void read(BufferReader reader) {
     super.read(reader);
-    int version = reader.readInt();
-    switch (version) {
+    switch (reader.readInt()) {
       case 1:
         title = reader.readString();
         body = reader.readString();
         break;
 
       default:
-        throw ArgumentError('Unknown version $version');
+        throw ArgumentError('Unknown version');
     }
   }
 }

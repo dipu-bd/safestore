@@ -8,19 +8,20 @@ abstract class Serializable {
 
   String _id;
   int _updatedAt;
-  int _deletedAt;
   int _createdAt;
-  bool _deleted = false;
+  int _deletedAt;
+  bool _deleted;
 
   String get id => _id;
 
-  bool get deleted => _deleted;
+  bool get deleted => _deleted ?? false;
 
   DateTime get createdAt => DateTime.fromMillisecondsSinceEpoch(_createdAt);
 
   DateTime get updatedAt => DateTime.fromMillisecondsSinceEpoch(_updatedAt);
 
-  DateTime get deletedAt => DateTime.fromMillisecondsSinceEpoch(_deletedAt);
+  DateTime get deletedAt =>
+      deleted ? DateTime.fromMillisecondsSinceEpoch(_deletedAt) : null;
 
   Serializable() : this.id(Crypto.generateId());
 
@@ -35,13 +36,12 @@ abstract class Serializable {
     writer.writeInt(_createdAt);
     writer.writeInt(_updatedAt);
     writer.writeBool(_deleted);
-    writer.writeInt(_deletedAt ?? 0);
+    writer.writeInt(_deletedAt);
   }
 
   @mustCallSuper
   void read(BufferReader reader) {
-    int version = reader.readInt();
-    switch (version) {
+    switch (reader.readInt()) {
       case 1:
         _id = reader.readString();
         _createdAt = reader.readInt();
@@ -51,11 +51,11 @@ abstract class Serializable {
         break;
 
       default:
-        throw ArgumentError('Unknown version $version');
+        throw ArgumentError('Unknown version');
     }
   }
 
-  void setUpdateTime() {
+  void notifyUpdate() {
     _updatedAt = DateTime.now().millisecondsSinceEpoch;
   }
 
