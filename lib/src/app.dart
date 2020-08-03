@@ -21,7 +21,8 @@ class App extends StatelessWidget {
       child: MaterialApp(
         title: 'Safestore',
         theme: ThemeData.dark().copyWith(
-          backgroundColor: Colors.grey[900],
+          scaffoldBackgroundColor: Colors.grey[900],
+          cardColor: Colors.grey[850],
           primaryColor: Colors.blueGrey,
           accentColor: Colors.amber,
         ),

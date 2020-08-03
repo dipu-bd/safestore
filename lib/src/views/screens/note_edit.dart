@@ -1,11 +1,10 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:safestore/src/blocs/store_bloc.dart';
-import 'package:safestore/src/models/note.dart';
+import 'package:safestore/src/models/simple_note.dart';
 
 class NoteEditDialog extends StatelessWidget {
-  static Future<void> show(BuildContext context, Note note) async {
+  static Future<void> show(BuildContext context, SimpleNote note) async {
     Navigator.of(context).push(
       MaterialPageRoute(
         fullscreenDialog: true,
@@ -15,7 +14,7 @@ class NoteEditDialog extends StatelessWidget {
     );
   }
 
-  final Note note;
+  final SimpleNote note;
   final titleFocus = FocusNode();
   final bodyFocus = FocusNode();
   final TextEditingController titleController;
@@ -66,36 +65,42 @@ class NoteEditDialog extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          TextField(
-            focusNode: titleFocus,
-            controller: titleController,
-            style: GoogleFonts.delius(fontSize: 20, color: Colors.amber),
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: Colors.grey[900],
-              hintText: 'Title',
-              border: InputBorder.none,
-            ),
-            onSubmitted: (_) => bodyFocus.requestFocus(),
-          ),
-          SizedBox(height: 5),
-          Expanded(
-            child: TextField(
-              maxLines: null,
-              expands: true,
-              focusNode: bodyFocus,
-              controller: bodyController,
-              textAlignVertical: TextAlignVertical.top,
-              style: GoogleFonts.delius(fontSize: 14),
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: Colors.grey[900],
-                hintText: 'Your note here',
-                border: InputBorder.none,
-              ),
-            ),
-          ),
+          buildTitleField(),
+          Expanded(child: buildBodyField()),
         ],
+      ),
+    );
+  }
+
+  Widget buildTitleField() {
+    return TextField(
+      focusNode: titleFocus,
+      controller: titleController,
+      style: GoogleFonts.delius(fontSize: 20, color: Colors.amber),
+      textInputAction: TextInputAction.next,
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: Colors.grey[850],
+        hintText: 'Title',
+        border: InputBorder.none,
+      ),
+      onSubmitted: (_) => bodyFocus.requestFocus(),
+    );
+  }
+
+  Widget buildBodyField() {
+    return TextField(
+      maxLines: null,
+      expands: true,
+      focusNode: bodyFocus,
+      controller: bodyController,
+      textAlignVertical: TextAlignVertical.top,
+      style: GoogleFonts.delius(fontSize: 14),
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: Colors.grey[850],
+        hintText: 'Your note here',
+        border: InputBorder.none,
       ),
     );
   }
