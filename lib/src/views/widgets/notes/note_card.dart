@@ -1,9 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:safestore/src/blocs/store_bloc.dart';
 import 'package:safestore/src/models/simple_note.dart';
 import 'package:safestore/src/views/screens/note_edit.dart';
-import 'package:safestore/src/views/widgets/notes/group_chip.dart';
+import 'package:safestore/src/views/widgets/note_editors/note_utils.dart';
 
 class NoteCard extends StatelessWidget {
   final SimpleNote note;
@@ -13,9 +14,28 @@ class NoteCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(3),
+      ),
+      margin: EdgeInsets.all(3),
       child: InkWell(
-        onTap: () => NoteEditDialog.show(context, note),
-        child: buildTile(),
+        onTap: () {
+          if (note.deleted) return;
+          NoteEditDialog.show(context, note);
+        },
+        child: Stack(
+          children: <Widget>[
+            Padding(
+              child: buildTile(),
+              padding: EdgeInsets.only(right: 20),
+            ),
+            Positioned(
+              top: 0,
+              right: 0,
+              child: buildNoteDropDown(context),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -31,19 +51,19 @@ class NoteCard extends StatelessWidget {
           buildTitle(),
           SizedBox(height: note.body.isNotEmpty ? 5 : 0),
           buildBody(),
-          SizedBox(height: 5),
-          buildTags(),
         ],
       ),
     );
   }
 
   Widget buildTitle() {
-    return Text(
-      note.title,
-      style: GoogleFonts.delius(
-        fontSize: 20,
-        color: Colors.amber,
+    return Container(
+      child: Text(
+        note.title,
+        style: GoogleFonts.delius(
+          fontSize: 20,
+          color: Colors.amber,
+        ),
       ),
     );
   }
@@ -62,13 +82,50 @@ class NoteCard extends StatelessWidget {
     );
   }
 
-  Widget buildTags() {
-    return Container(
-      child: Wrap(
-        children: <Widget>[
-          ...note.groups.map((e) => GroupChip(e)),
-        ],
+  Widget buildNoteDropDown(BuildContext context) {
+    var menus = <PopupMenuEntry<int>>[
+      PopupMenuItem(
+        value: 1,
+        child: Text('Edit labels'),
       ),
+    ];
+    if (!note.deleted) {
+      menus.addAll([
+        PopupMenuItem(
+          value: 2,
+          child: Text('Archive note'),
+        ),
+      ]);
+    } else {
+      menus.addAll([
+        PopupMenuItem(
+          value: 3,
+          child: Text('Restore note'),
+        ),
+        PopupMenuDivider(height: 1),
+        PopupMenuItem(
+          value: 4,
+          child: Text('Delete forever'),
+        ),
+      ]);
+    }
+
+    return PopupMenuButton<int>(
+      color: Color(0xff3d3c3d),
+      icon: Icon(Icons.more_vert),
+      itemBuilder: (context) => menus,
+      onSelected: (value) {
+        switch (value) {
+          case 1:
+            return handleEditLabels(context, note);
+          case 2:
+            return StoreBloc.of(context).state.storage.delete(note);
+          case 3:
+            return StoreBloc.of(context).state.storage.undelete(note);
+          case 4:
+            return handleNoteDelete(context, note);
+        }
+      },
     );
   }
 }

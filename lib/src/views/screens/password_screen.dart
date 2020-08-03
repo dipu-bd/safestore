@@ -17,7 +17,10 @@ class PasswordScreen extends StatelessWidget {
         appBar: AppBar(
           title: Text(
             'Access Bin',
-            style: GoogleFonts.baloo(),
+            style: GoogleFonts.anticSlab(
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.5,
+            ),
           ),
           leading: IconButton(
             icon: Icon(Icons.close),
@@ -63,10 +66,12 @@ class PasswordScreen extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        CircleAvatar(
-          radius: 64,
-          backgroundImage: CachedNetworkImageProvider(auth.picture),
-        ),
+        auth.picture != null
+            ? CircleAvatar(
+                radius: 64,
+                backgroundImage: CachedNetworkImageProvider(auth.picture),
+              )
+            : Container(),
         SizedBox(height: 10),
         Text(
           auth.username,

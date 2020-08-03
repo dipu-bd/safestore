@@ -1,16 +1,15 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:safestore/src/models/group.dart';
 import 'package:safestore/src/models/serializable.dart';
 import 'package:safestore/src/models/simple_note.dart';
 import 'package:safestore/src/utils/byte_buffer_reader.dart';
 import 'package:safestore/src/utils/byte_buffer_writer.dart';
 
 class NoteStorage {
-  final _updateStream = StreamController<NoteStorage>.broadcast();
+  final _updateStream = StreamController<int>.broadcast();
 
-  Stream<NoteStorage> get stream => _updateStream.stream;
+  Stream<int> get stream => _updateStream.stream;
 
   void close() {
     _updateStream.close();
@@ -23,47 +22,54 @@ class NoteStorage {
   int _updatedAt = 0;
   Map<String, Serializable> _items = {};
 
+  bool hasItem(String id) => _items.containsKey(id);
+
   T find<T extends Serializable>(String id) => _items[id];
 
   void save<T extends Serializable>(T item) {
     item.notifyUpdate();
     _items[item.id] = item;
     _updatedAt = DateTime.now().millisecondsSinceEpoch;
-    _updateStream.sink.add(this);
+    _updateStream.sink.add(_updatedAt);
   }
 
-  void delete<T extends Serializable>(T note) {
-    note.notifyUpdate();
-    _items.remove(note.id);
+  void delete<T extends Serializable>(T item) {
+    if (item.deleted) {
+      _items.remove(item.id);
+    } else {
+      _items[item.id].markAsDeleted();
+    }
     _updatedAt = DateTime.now().millisecondsSinceEpoch;
-    _updateStream.sink.add(this);
+    _updateStream.sink.add(_updatedAt);
   }
 
-  List<T> findAll<T extends Serializable>([bool Function(T item) predicate]) {
+  void undelete<T extends Serializable>(T item) {
+    _items[item.id].markAsDeleted(false);
+    _updatedAt = DateTime.now().millisecondsSinceEpoch;
+    _updateStream.sink.add(_updatedAt);
+  }
+
+  Iterable<T> findAll<T extends Serializable>(
+      [bool Function(T item) predicate]) {
     predicate ??= (_) => true;
     return _items.values
         .where((e) => e.runtimeType == T)
         .map((e) => e as T)
-        .where(predicate)
-        .toList();
+        .where(predicate);
   }
 
   // ---------------------------------------------------------------------------
 
-  List<SimpleNote> notes({bool includeTrash = false}) =>
+  Iterable<SimpleNote> notes({bool includeTrash = false}) =>
       findAll((note) => includeTrash || !note.deleted);
 
-  List<Group> groups({bool includeTrash = false}) =>
-      findAll((group) => includeTrash || !group.deleted)
-        ..insert(0, Group.ungrouped);
+  Set<String> labels() =>
+      notes().fold(Set<String>(), (set, note) => set..addAll(note.labels));
 
-  List<SimpleNote> notesByGroup(String groupId, {bool includeTrash = false}) =>
-      findAll((note) {
-        if (!includeTrash && note.deleted) return false;
-        return groupId == null || note.groups.contains(groupId);
-      });
-
-  Group findGroup(String id) => find(id) ?? Group.ungrouped;
+  Iterable<SimpleNote> notesByLabel(String label,
+          {bool includeTrash = false}) =>
+      notes(includeTrash: includeTrash)
+          .where((note) => note.labels.contains(label));
 
   // ---------------------------------------------------------------------------
 

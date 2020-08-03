@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:safestore/src/blocs/store_bloc.dart';
@@ -6,7 +7,7 @@ import 'package:safestore/src/views/screens/note_edit.dart';
 import 'package:safestore/src/views/widgets/main_drawer.dart';
 import 'package:safestore/src/views/widgets/notes/note_card.dart';
 
-class HomeScreen extends StatelessWidget {
+class NoteListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -17,16 +18,7 @@ class HomeScreen extends StatelessWidget {
         floatingActionButton: buildFAB(context),
         body: RefreshIndicator(
           onRefresh: () => handleRefresh(context),
-          child: SingleChildScrollView(
-            child: Container(
-              padding: EdgeInsets.all(5),
-              constraints: BoxConstraints(
-                minHeight:
-                    MediaQuery.of(context).size.height - kToolbarHeight - 24,
-              ),
-              child: buildContent(context),
-            ),
-          ),
+          child: buildContent(context),
         ),
       ),
     );
@@ -36,8 +28,11 @@ class HomeScreen extends StatelessWidget {
     final store = StoreBloc.of(context).state;
     return AppBar(
       title: Text(
-        'Notes',
-        style: GoogleFonts.baloo(),
+        '${store.currentLabel ?? 'All'} Notes',
+        style: GoogleFonts.anticSlab(
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.5,
+        ),
       ),
       actions: <Widget>[
         IconButton(
@@ -66,7 +61,14 @@ class HomeScreen extends StatelessWidget {
 
   Widget buildContent(BuildContext context) {
     final state = StoreBloc.of(context).state;
-    final notes = state.storage.findAll<SimpleNote>();
+    final label = state.currentLabel;
+    final notes = state.storage.findAll<SimpleNote>((note) {
+      if (label == 'Archived') return note.deleted;
+      if (note.deleted) return false;
+      if (label == null) return true;
+      return (note.labels.contains(label));
+    });
+
     if (notes.isEmpty) {
       return Center(
         child: Text(
@@ -75,7 +77,8 @@ class HomeScreen extends StatelessWidget {
         ),
       );
     }
-    return Column(
+    return ListView(
+      padding: EdgeInsets.all(5).copyWith(bottom: 100),
       children: <Widget>[
         ...notes.map((note) => NoteCard(note)),
       ],

@@ -1,10 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import 'package:safestore/src/blocs/auth_bloc.dart';
 import 'package:safestore/src/blocs/store_bloc.dart';
-import 'package:safestore/src/utils/to_string.dart';
 
 class MainDrawer extends StatelessWidget {
   @override
@@ -15,15 +14,9 @@ class MainDrawer extends StatelessWidget {
         children: <Widget>[
           SizedBox(height: 30),
           buildUser(context),
+          Divider(height: 1),
           SizedBox(height: 10),
-          Expanded(
-            child: SingleChildScrollView(
-              child: Container(
-                padding: EdgeInsets.all(10),
-                child: buildStat(context),
-              ),
-            ),
-          ),
+          Expanded(child: buildMenu(context)),
           SizedBox(height: 10),
           Divider(height: 1),
           SizedBox(height: 10),
@@ -36,79 +29,22 @@ class MainDrawer extends StatelessWidget {
 
   Widget buildUser(BuildContext context) {
     final auth = AuthBloc.of(context).state;
-    return Material(
-      elevation: 2,
-      child: Container(
-        padding: EdgeInsets.all(20),
-        alignment: Alignment.center,
-        child: Column(
-          children: <Widget>[
-            CircleAvatar(
-              radius: 54,
-              backgroundImage: CachedNetworkImageProvider(auth.picture),
-            ),
-            SizedBox(height: 10),
-            Text(
-              auth.username,
-              style: GoogleFonts.baloo(fontSize: 18),
-            ),
-            Text(
-              auth.email,
-              style: GoogleFonts.delius(
-                fontSize: 15,
-                color: Colors.amber,
-              ),
-            ),
-          ],
+    return ListTile(
+      leading: CircleAvatar(
+        radius: 24,
+        backgroundImage: CachedNetworkImageProvider(auth.picture),
+      ),
+      title: Text(
+        auth.username,
+        style: GoogleFonts.baloo(fontSize: 16),
+      ),
+      subtitle: Text(
+        auth.email,
+        style: GoogleFonts.delius(
+          fontSize: 14,
+          color: Colors.amber,
         ),
       ),
-    );
-  }
-
-  Widget buildTextValue(String title, String value) {
-    return Text.rich(
-      TextSpan(children: [
-        TextSpan(
-          text: '$title: ',
-          style: TextStyle(color: Colors.grey[100]),
-        ),
-        TextSpan(
-          text: value,
-          style: TextStyle(color: Colors.lime[100]),
-        ),
-      ]),
-      style: GoogleFonts.firaMono(fontSize: 14),
-      textAlign: TextAlign.start,
-    );
-  }
-
-  Widget buildStat(BuildContext context) {
-    final store = StoreBloc.of(context).state;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        buildTextValue('Bin ID', store.binName),
-        SizedBox(height: 8),
-        buildTextValue('Bin checksum (MD5)', store.lastDriveMd5),
-        SizedBox(height: 8),
-        buildTextValue('Data size', formatFileSize(store.driveFileSize)),
-        SizedBox(height: 8),
-        buildTextValue('Data checksum (MD5)', store.lastDataMd5),
-        SizedBox(height: 8),
-        buildTextValue('Total items', store.storage.totalItems.toString()),
-        SizedBox(height: 8),
-        buildTextValue('Last Synced', store.storage.lastSyncTime.toString()),
-        SizedBox(height: 8),
-        Divider(),
-        buildTextValue('Password Hash', ''),
-        SizedBox(height: 8),
-        QrImage(
-          data: String.fromCharCodes(store.passwordHash),
-          backgroundColor: Colors.white,
-          size: 160,
-        ),
-      ],
     );
   }
 
@@ -124,6 +60,54 @@ class MainDrawer extends StatelessWidget {
           child: Text('Logout'),
         ),
       ),
+    );
+  }
+
+  Widget buildMenu(BuildContext context) {
+    final state = StoreBloc.of(context).state;
+    final labels = state.storage.labels();
+    return ListView(
+      padding: EdgeInsets.all(10),
+      children: <Widget>[
+        buildLabel(context, null),
+        buildLabel(context, 'Archived'),
+        Divider(),
+        ...labels.map((label) => buildLabel(context, label)),
+        Divider(),
+        buildLabel(context, 'Statistics'),
+      ],
+    );
+  }
+
+  Widget buildLabel(BuildContext context, label) {
+    final state = StoreBloc.of(context).state;
+    bool selected = label == state.currentLabel;
+    var icon = Icons.label_outline;
+    if (label == null) {
+      icon = Icons.lightbulb_outline;
+    } else if (label == 'Archived') {
+      icon = Icons.archive;
+    } else if (label == 'Statistics') {
+      icon = Icons.trending_up;
+    } else if (selected) {
+      icon = Icons.label;
+    }
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: selected ? Colors.amber : null,
+      ),
+      title: Text(
+        label ?? 'All',
+        style: TextStyle(
+          color: selected ? Colors.amber : null,
+        ),
+      ),
+      onTap: () {
+        Navigator.of(context).pop();
+        state.currentLabel = label;
+        StoreBloc.of(context).notify();
+      },
     );
   }
 

@@ -7,7 +7,7 @@ class SimpleNote extends Serializable {
 
   String title;
   String body;
-  final groups = Set<String>();
+  final labels = Set<String>();
 
   @override
   void write(BufferWriter writer) {
@@ -15,7 +15,7 @@ class SimpleNote extends Serializable {
     writer.writeInt(_version);
     writer.writeString(title);
     writer.writeString(body);
-    writer.writeStringList(groups.toList());
+    writer.writeStringList(labels.toList());
   }
 
   @override
@@ -31,8 +31,8 @@ class SimpleNote extends Serializable {
         title = reader.readString();
         body = reader.readString();
         var list = reader.readStringList();
-        groups.clear();
-        groups.addAll(list);
+        labels.clear();
+        labels.addAll(list);
         break;
 
       default:

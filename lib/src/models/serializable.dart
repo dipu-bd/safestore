@@ -2,6 +2,8 @@ import 'package:meta/meta.dart';
 import 'package:safestore/src/services/crypto.dart';
 import 'package:safestore/src/utils/buffer_reader.dart';
 import 'package:safestore/src/utils/buffer_writer.dart';
+import 'package:safestore/src/utils/byte_buffer_reader.dart';
+import 'package:safestore/src/utils/byte_buffer_writer.dart';
 
 abstract class Serializable {
   static final int _version = 1;
@@ -59,8 +61,21 @@ abstract class Serializable {
     _updatedAt = DateTime.now().millisecondsSinceEpoch;
   }
 
-  void markAsDeleted() {
-    _deleted = true;
-    _deletedAt = DateTime.now().millisecondsSinceEpoch;
+  void markAsDeleted([bool deleted = true]) {
+    _deleted = deleted;
+    if (deleted) {
+      _deletedAt = DateTime.now().millisecondsSinceEpoch;
+    } else {
+      _updatedAt = DateTime.now().millisecondsSinceEpoch;
+    }
   }
+
+  void copyFrom<T extends Serializable>(T other) {
+    final writer = ByteBufferWriter();
+    other.write(writer);
+    final reader = ByteBufferReader(writer.toBytes());
+    read(reader);
+  }
+
+  bool isNew() => (_createdAt - _updatedAt).abs() < 10;
 }
