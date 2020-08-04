@@ -9,6 +9,9 @@ class SimpleNote extends Serializable {
   String body;
   final labels = Set<String>();
 
+  static const LABEL_DEFAULT = null;
+  static const LABEL_ARCHIVE = 'Archived';
+
   @override
   void write(BufferWriter writer) {
     super.write(writer);

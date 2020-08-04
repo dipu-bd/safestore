@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:safestore/src/blocs/auth_bloc.dart';
 import 'package:safestore/src/blocs/store_bloc.dart';
-import 'package:safestore/src/views/screens/about_screen.dart';
 import 'package:safestore/src/views/screens/login_screen.dart';
 import 'package:safestore/src/views/screens/note_list_screen.dart';
 import 'package:safestore/src/views/screens/password_screen.dart';
@@ -54,12 +53,7 @@ class App extends StatelessWidget {
           if (!state.binFound) {
             return PasswordScreen();
           }
-          switch (state.currentLabel) {
-            case "Statistics":
-              return AboutScreen();
-            default:
-              return NoteListScreen();
-          }
+          return NoteListScreen();
         },
       ),
     );

@@ -53,26 +53,30 @@ class NoteListScreen extends StatelessWidget {
   }
 
   Widget buildFAB(BuildContext context) {
+    final store = StoreBloc.of(context).state;
     return FloatingActionButton(
       child: Icon(Icons.add),
-      onPressed: () => NoteEditDialog.show(context, SimpleNote()),
+      onPressed: () => NoteEditDialog.show(
+        context,
+        SimpleNote()..labels.add(store.currentLabel),
+      ),
     );
   }
 
   Widget buildContent(BuildContext context) {
     final state = StoreBloc.of(context).state;
-    final label = state.currentLabel;
+    final label = state.currentLabel ?? 'All';
     final notes = state.storage.findAll<SimpleNote>((note) {
-      if (label == 'Archived') return note.deleted;
+      if (label == SimpleNote.LABEL_ARCHIVE && note.deleted) return true;
       if (note.deleted) return false;
-      if (label == null) return true;
+      if (label == 'All') return true;
       return (note.labels.contains(label));
     });
 
     if (notes.isEmpty) {
       return Center(
         child: Text(
-          'No notes found',
+          'No notes found in $label',
           style: TextStyle(color: Colors.grey),
         ),
       );

@@ -1,10 +1,13 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:safestore/src/blocs/store_bloc.dart';
 import 'package:safestore/src/models/simple_note.dart';
+import 'package:safestore/src/views/screens/label_select.dart';
 import 'package:safestore/src/views/screens/note_edit.dart';
-import 'package:safestore/src/views/widgets/note_editors/note_utils.dart';
+
+import 'file:///C:/Users/Dipu/Projects/safestore/lib/src/views/widgets/notes/note_utils.dart';
 
 class NoteCard extends StatelessWidget {
   final SimpleNote note;
@@ -114,18 +117,26 @@ class NoteCard extends StatelessWidget {
       color: Color(0xff3d3c3d),
       icon: Icon(Icons.more_vert),
       itemBuilder: (context) => menus,
+      offset: Offset(0, 40),
       onSelected: (value) {
         switch (value) {
           case 1:
-            return handleEditLabels(context, note);
+            return handleEditLabels(context);
           case 2:
             return StoreBloc.of(context).state.storage.delete(note);
           case 3:
-            return StoreBloc.of(context).state.storage.undelete(note);
+            return StoreBloc.of(context).state.storage.restore(note);
           case 4:
             return handleNoteDelete(context, note);
         }
       },
     );
+  }
+
+  void handleEditLabels(BuildContext context) async {
+    final save = await LabelSelectScreen.show(context, note.labels);
+    if (save is bool && save) {
+      StoreBloc.of(context).state.storage.save(note);
+    }
   }
 }

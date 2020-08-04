@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:safestore/src/blocs/store_bloc.dart';
 import 'package:safestore/src/models/simple_note.dart';
-import 'package:safestore/src/views/widgets/note_editors/note_edit_form.dart';
-import 'package:safestore/src/views/widgets/note_editors/note_utils.dart';
+import 'package:safestore/src/views/screens/label_select.dart';
+
+import 'file:///C:/Users/Dipu/Projects/safestore/lib/src/views/widgets/notes/note_edit_form.dart';
+import 'file:///C:/Users/Dipu/Projects/safestore/lib/src/views/widgets/notes/note_utils.dart';
 
 class NoteEditDialog extends StatelessWidget {
   static Future<void> show(BuildContext context, SimpleNote note) async {
@@ -45,7 +47,7 @@ class NoteEditDialog extends StatelessWidget {
         ),
       ),
       actions: <Widget>[
-        buildNoteDropDown(context),
+        buildDropDown(context),
       ],
     );
   }
@@ -60,7 +62,7 @@ class NoteEditDialog extends StatelessWidget {
     );
   }
 
-  Widget buildNoteDropDown(BuildContext context) {
+  Widget buildDropDown(BuildContext context) {
     final state = StoreBloc.of(context).state;
     if (!state.storage.hasItem(editing.id)) {
       return Container();
@@ -76,22 +78,24 @@ class NoteEditDialog extends StatelessWidget {
         ),
         PopupMenuItem(
           value: 2,
-          child: Text(editing.deleted ? 'Delete note' : 'Archive note'),
+          child: Text('Archive note'),
         ),
       ],
       onSelected: (value) {
         switch (value) {
           case 1:
-            handleEditLabels(context, editing);
-            break;
+            return handleEditLabels(context);
           case 2:
-            handleNoteDelete(context, editing);
-            Navigator.of(context).pop();
-            break;
-          default:
-            break;
+            return state.storage.delete(editing);
         }
       },
     );
+  }
+
+  void handleEditLabels(BuildContext context) async {
+    final save = await LabelSelectScreen.show(context, note.labels);
+    if (save is bool && save) {
+      StoreBloc.of(context).state.storage.save(note);
+    }
   }
 }

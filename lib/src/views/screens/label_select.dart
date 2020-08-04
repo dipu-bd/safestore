@@ -1,10 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:safestore/src/blocs/store_bloc.dart';
 import 'package:safestore/src/utils/to_string.dart';
 
-class LabelSelectScreen extends StatefulWidget {
-  static Future<bool> show(BuildContext context, Set<String> selection) {
+class LabelSelectScreen extends StatelessWidget {
+  static Future show(BuildContext context, Set<String> selection) {
     return Navigator.of(context).push(
       MaterialPageRoute(
         fullscreenDialog: true,
@@ -15,70 +18,70 @@ class LabelSelectScreen extends StatefulWidget {
   }
 
   final Set<String> selection;
+  final labelTextFocus = FocusNode();
+  final labelText = TextEditingController(text: '');
+  final _changed = StreamController.broadcast();
 
   LabelSelectScreen(this.selection);
 
   @override
-  State<StatefulWidget> createState() => _LabelSelectScreenState();
-}
-
-class _LabelSelectScreenState extends State<LabelSelectScreen> {
-  final labelTextFocus = FocusNode();
-  final labelText = TextEditingController(text: '');
-
-  final labels = Set<String>();
-
-  @override
-  void initState() {
-    super.initState();
-    resetLabels();
-  }
-
-  void resetLabels() {
-    final state = StoreBloc.of(context).state;
-    labels.clear();
-    labels.addAll(state.storage.labels());
-    labels.addAll(widget.selection);
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Scaffold(
-        appBar: AppBar(
-          title: buildTagInput(),
-        ),
-        body: labels.isEmpty
-            ? Center(child: Text('No groups found'))
-            : ListView(
-                padding: EdgeInsets.all(12),
-                children: <Widget>[
-                  ...labels.map(buildLabel),
-                ],
+    return WillPopScope(
+      onWillPop: () async {
+        _changed.close();
+        return true;
+      },
+      child: BlocBuilder<StoreBloc, StoreState>(
+        builder: (context, state) {
+          return SafeArea(
+            top: false,
+            child: Scaffold(
+              appBar: AppBar(
+                title: buildTagInput(context),
               ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () => handleDone(),
-          child: Icon(Icons.done),
-        ),
+              body: buildBody(state.storage.labels()),
+              floatingActionButton: FloatingActionButton(
+                onPressed: () => handleDone(context),
+                child: Icon(Icons.done),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget buildLabel(String label) {
-    bool selected = widget.selection.contains(label);
-    return ListTile(
-      title: Text(label),
-      leading: Icon(selected ? Icons.label : Icons.label_outline),
-      onTap: () => handleToggle(label),
+  Widget buildBody(Iterable<String> labels) {
+    if (labels.isEmpty) {
+      return Center(child: Text('No groups found'));
+    }
+    return ListView(
+      padding: EdgeInsets.all(12),
+      children: <Widget>[
+        ...labels.map(buildLabel),
+      ],
     );
   }
 
-  Widget buildTagInput() {
+  Widget buildLabel(String label) {
+    return StreamBuilder(
+      stream: _changed.stream,
+      builder: (context, snapshot) {
+        bool selected = selection.contains(label);
+        return ListTile(
+          title: Text(label),
+          leading: Icon(selected ? Icons.label : Icons.label_outline),
+          onTap: () => handleToggle(label),
+        );
+      },
+    );
+  }
+
+  Widget buildTagInput(BuildContext context) {
     return TextField(
       controller: labelText,
       focusNode: labelTextFocus,
-      onSubmitted: (label) => handleAdd(),
+      onSubmitted: (label) => handleAdd(context),
       decoration: InputDecoration(
         hintText: 'Add new label',
         border: InputBorder.none,
@@ -87,25 +90,28 @@ class _LabelSelectScreenState extends State<LabelSelectScreen> {
   }
 
   void handleToggle(String label) {
-    if (widget.selection.contains(label)) {
-      widget.selection.remove(label);
+    if (selection.contains(label)) {
+      selection.remove(label);
     } else {
-      widget.selection.add(label);
+      selection.add(label);
     }
-    if (mounted) setState(() {});
+    _changed.sink.add(label);
   }
 
-  void handleAdd() {
+  void handleAdd(BuildContext context) {
     final label = toTitleCase(labelText.text);
     labelText.clear();
     if (label.isNotEmpty) {
-      labels.add(label);
-      widget.selection.add(label);
-      if (mounted) setState(() {});
+      final state = StoreBloc.of(context).state;
+      state.storage.addLabel(label);
+      selection.add(label);
+      _changed.add(label);
+      StoreBloc.of(context).notify();
     }
   }
 
-  void handleDone() {
+  void handleDone(BuildContext context) {
+    handleAdd(context);
     Navigator.of(context).pop(true);
   }
 }

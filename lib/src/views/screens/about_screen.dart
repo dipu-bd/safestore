@@ -1,9 +1,10 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:safestore/src/blocs/store_bloc.dart';
 import 'package:safestore/src/utils/to_string.dart';
-import 'package:safestore/src/views/widgets/main_drawer.dart';
 
 class AboutScreen extends StatelessWidget {
   static Future show(BuildContext context) {
@@ -18,18 +19,20 @@ class AboutScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Scaffold(
-        drawer: MainDrawer(),
-        appBar: buildAppBar(context),
-        body: buildContent(context),
-      ),
+    return BlocBuilder<StoreBloc, StoreState>(
+      builder: (context, state) {
+        return SafeArea(
+          top: false,
+          child: Scaffold(
+            appBar: buildAppBar(state),
+            body: buildContent(state),
+          ),
+        );
+      },
     );
   }
 
-  Widget buildAppBar(BuildContext context) {
-    final store = StoreBloc.of(context).state;
+  Widget buildAppBar(StoreState state) {
     return AppBar(
       title: Text(
         'About',
@@ -38,7 +41,7 @@ class AboutScreen extends StatelessWidget {
           letterSpacing: 1.5,
         ),
       ),
-      bottom: store.syncing
+      bottom: state.syncing
           ? PreferredSize(
               preferredSize: Size.fromHeight(5),
               child: SizedBox(
@@ -50,31 +53,58 @@ class AboutScreen extends StatelessWidget {
     );
   }
 
-  Widget buildContent(BuildContext context) {
-    final store = StoreBloc.of(context).state;
+  Widget buildContent(StoreState state) {
     return ListView(
-      padding: EdgeInsets.all(10),
+      padding: EdgeInsets.all(10).copyWith(bottom: 50),
       children: <Widget>[
-        buildItem(title: 'Bin ID', value: store.binName),
-        buildItem(title: 'Bin checksum (MD5)', value: store.lastDriveMd5),
+        buildItem(
+          key: 'Bin ID',
+          value: state.binName,
+        ),
+        buildItem(
+          key: 'Bin checksum (MD5)',
+          value: state.lastDriveMd5,
+        ),
         Divider(),
         buildItem(
-            title: 'Data size', value: formatFileSize(store.driveFileSize)),
-        buildItem(title: 'Data checksum (MD5)', value: store.lastDataMd5),
+          key: 'Data size',
+          value: formatFileSize(state.dataVolumeSize),
+        ),
         buildItem(
-            title: 'Total items', value: store.storage.totalItems.toString()),
+          key: 'Data checksum (MD5)',
+          value: state.lastDataMd5,
+        ),
         buildItem(
-            title: 'Last Synced', value: store.storage.lastSyncTime.toString()),
+          key: 'Last Synced',
+          value: state.storage.lastSyncTime,
+        ),
         Divider(),
         buildItem(
+          key: 'Total items',
+          value: state.storage.totalItems,
+        ),
+        buildItem(
+          key: 'Labels count',
+          valueBuilder: () async => state.storage.labels().length,
+        ),
+        buildItem(
+          key: 'Visible notes count',
+          valueBuilder: () async => state.storage.notes().length,
+        ),
+        buildItem(
+          key: 'Archived notes count',
+          valueBuilder: () async => state.storage.archivedNotes().length,
+        ),
+        Divider(),
+        buildImageItem(
           title: 'Password Hash',
-          subtitle: Container(
-            alignment: Alignment.centerLeft,
+          subtitle: 'Never share this with anyone',
+          image: Container(
             padding: EdgeInsets.only(top: 10),
             child: QrImage(
-              data: String.fromCharCodes(store.passwordHash),
+              data: String.fromCharCodes(state.passwordHash),
               backgroundColor: Colors.white,
-              size: 160,
+              size: 180,
             ),
           ),
         ),
@@ -82,17 +112,68 @@ class AboutScreen extends StatelessWidget {
     );
   }
 
-  Widget buildItem({String title, String value, Widget subtitle}) {
+  Widget buildImageItem({title, subtitle, Widget image}) {
     return ListTile(
-      title: Text(
-        title,
-        style: TextStyle(color: Colors.grey[100]),
+      title: buildTitle(title),
+      subtitle: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          image,
+          SizedBox(height: 5),
+          buildSubtitle(subtitle),
+        ],
       ),
-      subtitle: subtitle ??
-          Text(
-            value,
-            style: TextStyle(color: Colors.lime[100]),
-          ),
+    );
+  }
+
+  Widget buildItem({key, value, Future Function() valueBuilder}) {
+    Widget title = buildTitle(key);
+    Widget subtitle = buildSubtitle(value);
+    if (valueBuilder != null) {
+      subtitle = FutureBuilder(
+        future: valueBuilder(),
+        builder: (_, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return buildErrorText('Loading...');
+          }
+          if (snapshot.hasError) {
+            return buildErrorText(snapshot.error);
+          }
+          return buildSubtitle(snapshot.data);
+        },
+      );
+    }
+    return ListTile(
+      title: title,
+      subtitle: subtitle,
+    );
+  }
+
+  Widget buildTitle(title) {
+    return Text(
+      '$title',
+      style: TextStyle(
+        color: Colors.grey[100],
+      ),
+    );
+  }
+
+  Widget buildSubtitle(value) {
+    return Text(
+      '$value',
+      style: GoogleFonts.firaMono(
+        color: Colors.lime[100],
+      ),
+    );
+  }
+
+  Widget buildErrorText(error) {
+    return Text(
+      '$error',
+      style: GoogleFonts.firaMono(
+        color: Colors.grey,
+      ),
     );
   }
 }

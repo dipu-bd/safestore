@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:safestore/src/blocs/auth_bloc.dart';
 import 'package:safestore/src/blocs/store_bloc.dart';
+import 'package:safestore/src/models/simple_note.dart';
+import 'package:safestore/src/views/screens/about_screen.dart';
 
 class MainDrawer extends StatelessWidget {
   @override
@@ -69,12 +71,19 @@ class MainDrawer extends StatelessWidget {
     return ListView(
       padding: EdgeInsets.all(10),
       children: <Widget>[
-        buildLabel(context, null),
-        buildLabel(context, 'Archived'),
+        buildLabel(context, SimpleNote.LABEL_DEFAULT),
+        buildLabel(context, SimpleNote.LABEL_ARCHIVE),
         labels.isNotEmpty ? Divider() : Container(),
         ...labels.map((label) => buildLabel(context, label)),
         Divider(),
-        buildLabel(context, 'Statistics'),
+        ListTile(
+          leading: Icon(Icons.trending_up),
+          title: Text('Statistics'),
+          onTap: () {
+            Navigator.of(context).pop();
+            AboutScreen.show(context);
+          },
+        ),
       ],
     );
   }
@@ -83,12 +92,10 @@ class MainDrawer extends StatelessWidget {
     final state = StoreBloc.of(context).state;
     bool selected = label == state.currentLabel;
     var icon = Icons.label_outline;
-    if (label == null) {
+    if (label == SimpleNote.LABEL_DEFAULT) {
       icon = Icons.lightbulb_outline;
-    } else if (label == 'Archived') {
+    } else if (label == SimpleNote.LABEL_ARCHIVE) {
       icon = Icons.archive;
-    } else if (label == 'Statistics') {
-      icon = Icons.trending_up;
     } else if (selected) {
       icon = Icons.label;
     }

@@ -7,9 +7,9 @@ import 'package:safestore/src/utils/byte_buffer_reader.dart';
 import 'package:safestore/src/utils/byte_buffer_writer.dart';
 
 class NoteStorage {
-  final _updateStream = StreamController<int>.broadcast();
+  final _updateStream = StreamController<Serializable>.broadcast();
 
-  Stream<int> get stream => _updateStream.stream;
+  Stream<Serializable> get stream => _updateStream.stream;
 
   void close() {
     _updateStream.close();
@@ -17,10 +17,12 @@ class NoteStorage {
 
   // ---------------------------------------------------------------------------
 
-  static final int _version = 2;
+  static final int _version = 3;
 
   int _updatedAt = 0;
+  final _labels = Set<String>();
   Map<String, Serializable> _items = {};
+  final List<Type> _typeRegistry = [SimpleNote];
 
   bool hasItem(String id) => _items.containsKey(id);
 
@@ -29,8 +31,11 @@ class NoteStorage {
   void save<T extends Serializable>(T item) {
     item.notifyUpdate();
     _items[item.id] = item;
+    if (item is SimpleNote) {
+      _labels.addAll(item.labels);
+    }
     _updatedAt = DateTime.now().millisecondsSinceEpoch;
-    _updateStream.sink.add(_updatedAt);
+    _updateStream.sink.add(item);
   }
 
   void delete<T extends Serializable>(T item) {
@@ -40,13 +45,13 @@ class NoteStorage {
       _items[item.id].markAsDeleted();
     }
     _updatedAt = DateTime.now().millisecondsSinceEpoch;
-    _updateStream.sink.add(_updatedAt);
+    _updateStream.sink.add(item);
   }
 
-  void undelete<T extends Serializable>(T item) {
+  void restore<T extends Serializable>(T item) {
     _items[item.id].markAsDeleted(false);
     _updatedAt = DateTime.now().millisecondsSinceEpoch;
-    _updateStream.sink.add(_updatedAt);
+    _updateStream.sink.add(item);
   }
 
   Iterable<T> findAll<T extends Serializable>(
@@ -60,25 +65,15 @@ class NoteStorage {
 
   // ---------------------------------------------------------------------------
 
-  Iterable<SimpleNote> notes({bool includeTrash = false}) =>
-      findAll((note) => includeTrash || !note.deleted);
-
-  Set<String> labels() =>
-      notes().fold(Set<String>(), (set, note) => set..addAll(note.labels));
-
-  Iterable<SimpleNote> notesByLabel(String label,
-          {bool includeTrash = false}) =>
-      notes(includeTrash: includeTrash)
-          .where((note) => note.labels.contains(label));
-
-  // ---------------------------------------------------------------------------
-
   Uint8List export() {
     final writer = ByteBufferWriter();
     writer.writeInt(_version);
     writer.writeInt(_updatedAt);
-    writer.writeInt(_items.length);
-    _items.values.forEach((item) => item.write(writer));
+    writer.writeUint32(_items.length);
+    _items.values.forEach((item) {
+      writer.writeUint32(_typeRegistry.indexOf(item.runtimeType));
+      item.write(writer);
+    });
     return writer.toBytes();
   }
 
@@ -86,24 +81,34 @@ class NoteStorage {
     final reader = ByteBufferReader(data);
     switch (reader.readInt()) {
       case 1:
-        int updateTime = reader.readInt();
-        if (updateTime < _updatedAt) return; // imported data is older
-        int length = reader.readInt();
-        final entries = List<Serializable>.filled(length, null)
-            .map((item) => SimpleNote()..read(reader))
-            .map((e) => MapEntry(e.id, e));
-        _items = Map.fromEntries(entries);
-        break;
-
       case 2:
         int updateTime = reader.readInt();
         if (updateTime < _updatedAt) return; // imported data is older
-        _items.clear();
         int length = reader.readInt();
+        var entries = List<Serializable>();
         for (int i = 0; i < length; ++i) {
           final note = SimpleNote()..read(reader);
-          _items[note.id] = note;
+          _labels.addAll(note.labels);
+          entries.add(note);
         }
+        _items = Map.fromEntries(entries.map((e) => MapEntry(e.id, e)));
+        break;
+
+      case 3:
+        int updateTime = reader.readInt();
+        if (updateTime < _updatedAt) return; // imported data is older
+        int length = reader.readUint32();
+        var entries = List<Serializable>();
+        for (int i = 0; i < length; ++i) {
+          int type = reader.readUint32();
+          switch (_typeRegistry[type]) {
+            case SimpleNote:
+              final note = SimpleNote()..read(reader);
+              _labels.addAll(note.labels);
+              entries.add(note);
+          }
+        }
+        _items = Map.fromEntries(entries.map((e) => MapEntry(e.id, e)));
         break;
 
       default:
@@ -111,10 +116,18 @@ class NoteStorage {
     }
   }
 
-// ---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
 
   int get totalItems => _items.length;
 
   DateTime get lastSyncTime =>
       DateTime.fromMillisecondsSinceEpoch(_updatedAt ?? 0);
+
+  Set<String> labels() => _labels;
+
+  void addLabel(String label) => _labels.add(label);
+
+  Iterable<SimpleNote> notes() => findAll((note) => !note.deleted);
+
+  Iterable<SimpleNote> archivedNotes() => findAll((note) => note.deleted);
 }

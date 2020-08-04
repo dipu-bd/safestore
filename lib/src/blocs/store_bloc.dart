@@ -30,7 +30,7 @@ class StoreState {
 
   String lastDriveMd5;
   String lastDataMd5;
-  int driveFileSize;
+  int dataVolumeSize;
 
   String currentLabel;
 
@@ -158,10 +158,8 @@ class StoreBloc extends Bloc<StoreEvent, StoreState> {
         final cipher = Crypto.encrypt(compressed, state.passwordHash);
         await GoogleDrive().uploadFile(file, cipher);
         state.lastDataMd5 = checksum;
-        state.driveFileSize = cipher.length;
+        state.dataVolumeSize = cipher.length;
       }
-
-      state.lastSync = DateTime.now().millisecondsSinceEpoch;
     } catch (err, stack) {
       if (err is ApiRequestError) {
         GoogleDrive().signOut();
@@ -171,6 +169,7 @@ class StoreBloc extends Bloc<StoreEvent, StoreState> {
       state.syncError = '$err';
     } finally {
       log('Sync ended', name: '$this');
+      state.lastSync = DateTime.now().millisecondsSinceEpoch;
       state.syncing = false;
       add(StoreEvent.sync);
       notify();
