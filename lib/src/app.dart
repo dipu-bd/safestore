@@ -12,10 +12,10 @@ class App extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider<AuthBloc>(
-          create: (_) => AuthBloc(),
+          create: (context) => AuthBloc(),
         ),
         BlocProvider<StoreBloc>(
-          create: (_) => StoreBloc(),
+          create: (context) => StoreBloc(context),
         ),
       ],
       child: MaterialApp(
@@ -37,7 +37,7 @@ class App extends StatelessWidget {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (_, state) => withAnimatedSwitcher(
         () {
-          if (!state.userFound) {
+          if (!state.isLoggedIn) {
             return LoginScreen();
           }
           return buildHomePage();
@@ -50,7 +50,7 @@ class App extends StatelessWidget {
     return BlocBuilder<StoreBloc, StoreState>(
       builder: (_, state) => withAnimatedSwitcher(
         () {
-          if (!state.binFound) {
+          if (!state.isBinReady) {
             return PasswordScreen();
           }
           return NoteListScreen();
@@ -61,8 +61,8 @@ class App extends StatelessWidget {
 
   Widget withAnimatedSwitcher(Widget Function() builder, {Duration duration}) {
     return AnimatedSwitcher(
-      duration: duration ?? Duration(milliseconds: 500),
       child: builder(),
+      duration: duration ?? Duration(milliseconds: 500),
     );
   }
 }

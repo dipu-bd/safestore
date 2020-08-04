@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -23,7 +22,7 @@ class NoteCard extends StatelessWidget {
       margin: EdgeInsets.all(3),
       child: InkWell(
         onTap: () {
-          if (note.deleted) return;
+          if (note.isArchived) return;
           NoteEditDialog.show(context, note);
         },
         child: Stack(
@@ -92,7 +91,7 @@ class NoteCard extends StatelessWidget {
         child: Text('Edit labels'),
       ),
     ];
-    if (!note.deleted) {
+    if (!note.isArchived) {
       menus.addAll([
         PopupMenuItem(
           value: 2,

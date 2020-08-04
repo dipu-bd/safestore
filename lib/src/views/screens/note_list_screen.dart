@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:safestore/src/blocs/store_bloc.dart';
@@ -66,9 +65,9 @@ class NoteListScreen extends StatelessWidget {
   Widget buildContent(BuildContext context) {
     final state = StoreBloc.of(context).state;
     final label = state.currentLabel ?? 'All';
-    final notes = state.storage.findAll<SimpleNote>((note) {
-      if (label == SimpleNote.LABEL_ARCHIVE && note.deleted) return true;
-      if (note.deleted) return false;
+    final notes = state.storage.find((note) {
+      if (label == SimpleNote.LABEL_ARCHIVE && note.isArchived) return true;
+      if (note.isArchived) return false;
       if (label == 'All') return true;
       return (note.labels.contains(label));
     });

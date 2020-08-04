@@ -1,5 +1,4 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:safestore/src/blocs/auth_bloc.dart';
@@ -67,14 +66,13 @@ class MainDrawer extends StatelessWidget {
 
   Widget buildMenu(BuildContext context) {
     final state = StoreBloc.of(context).state;
-    final labels = state.storage.labels();
     return ListView(
       padding: EdgeInsets.all(10),
       children: <Widget>[
         buildLabel(context, SimpleNote.LABEL_DEFAULT),
         buildLabel(context, SimpleNote.LABEL_ARCHIVE),
-        labels.isNotEmpty ? Divider() : Container(),
-        ...labels.map((label) => buildLabel(context, label)),
+        state.labels.isNotEmpty ? Divider() : Container(),
+        ...state.labels.map((label) => buildLabel(context, label)),
         Divider(),
         ListTile(
           leading: Icon(Icons.trending_up),

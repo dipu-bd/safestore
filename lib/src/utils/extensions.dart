@@ -9,6 +9,10 @@ extension StringX on String {
     }
     return true;
   }
+
+  String toTitleCase() {
+    return '${substring(0, 1).toUpperCase()}${substring(1).toLowerCase()}';
+  }
 }
 
 /// Not part of public API

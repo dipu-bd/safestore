@@ -18,57 +18,37 @@ class GoogleHttpClient extends IOClient {
 }
 
 class GoogleDrive {
-  static final _instance = GoogleDrive._init();
-
-  factory GoogleDrive() => _instance;
-
-  GoogleDrive._init();
-
-  // ---------------------------------------------------------------------------
-
+  static final rootFolderName = 'Safestore';
   static final authScopes = <String>[
     'email',
     'https://www.googleapis.com/auth/drive.file',
     'https://www.googleapis.com/auth/drive.appdata',
   ];
-  static final rootFolderName = 'Safestore';
 
-  GoogleSignInAccount _googleUser;
-  Future<DriveApi> _driveApiFuture;
-  Future<File> _rootFolder;
+  DriveApi drive;
+  GoogleSignInAccount user;
+  Map<String, String> authHeaders;
+  File rootFolder;
 
-  Future<GoogleSignInAccount> signIn() async {
-    if (_googleUser == null) {
-      final googleSignIn = GoogleSignIn.standard(scopes: authScopes);
-      log('Signing in to google...', name: '$this');
-      _googleUser = await googleSignIn.signIn();
-      log('Email: ${_googleUser.email}', name: '$this');
-    }
-    return _googleUser;
+  GoogleDrive._();
+
+  static Future<GoogleDrive> signIn() async {
+    final instance = GoogleDrive._();
+    await instance.refreshToken();
+    return instance;
   }
 
-  void signOut() {
-    _rootFolder = null;
-    _googleUser = null;
-    _driveApiFuture = null;
-  }
-
-  Future<DriveApi> initDrive() async {
-    final googleUser = await signIn();
-    final authHeaders = await googleUser.authHeaders;
-    log('Header: $authHeaders', name: '$this');
-    final client = GoogleHttpClient(authHeaders);
-    final drive = DriveApi(client);
-    log('Ping request to drive', name: '$this');
-    await drive.files.list(spaces: 'drive');
+  Future<void> refreshToken() async {
+    final googleSignIn = GoogleSignIn.standard(scopes: authScopes);
+    log('Signing in to google...');
+    user = await googleSignIn.signIn();
+    log('Email: ${user.email}');
+    authHeaders = await user.authHeaders;
+    log('Headers: $authHeaders');
+    drive = DriveApi(GoogleHttpClient(authHeaders));
+    rootFolder = await findOrCreate(rootFolderName);
+    log('Root folder id: ${rootFolder?.id}');
     return drive;
-  }
-
-  Future<DriveApi> getDrive() {
-    if (_driveApiFuture == null) {
-      _driveApiFuture = initDrive();
-    }
-    return _driveApiFuture;
   }
 
   // ---------------------------------------------------------------------------
@@ -77,8 +57,6 @@ class GoogleDrive {
     assert(name != null && name.isNotEmpty);
     assert(!name.contains('/'));
     log('Looking for "$name"', name: '$this');
-
-    final drive = await getDrive();
     final files = await drive.files.list(
       spaces: 'drive',
       $fields: 'files(id, name, mimeType, description, md5Checksum)',
@@ -112,7 +90,6 @@ class GoogleDrive {
     }
 
     log('Create "${req.toJson()}"', name: '$this');
-    final drive = await getDrive();
     final file = await drive.files.create(req);
     return file;
   }
@@ -138,7 +115,6 @@ class GoogleDrive {
     if (file == null) {
       throw new Exception('No such file');
     }
-    final drive = await getDrive();
     final Media media = await drive.files.get(
       file.id,
       downloadOptions: DownloadOptions.FullMedia,
@@ -168,7 +144,6 @@ class GoogleDrive {
     req.description = dest.description;
 
     log('Upload ${data.length} bytes to "${req.description}"', name: '$this');
-    final drive = await getDrive();
     final file = await drive.files.update(
       req,
       dest.id,
@@ -180,21 +155,13 @@ class GoogleDrive {
   Future<void> deleteFile(File file) async {
     if (file == null) return;
     log("Deleting ${file.description}", name: '$this');
-    final drive = await getDrive();
     await drive.files.delete(file.id);
   }
 
   // ---------------------------------------------------------------------------
 
-  Future<File> rootFolder() {
-    if (_rootFolder == null) {
-      _rootFolder = findOrCreate(rootFolderName);
-    }
-    return _rootFolder;
-  }
-
   Future<File> ensureFolder(String path) async {
-    File folder = await rootFolder();
+    File folder = rootFolder;
     for (final name in (path ?? '').split('/')) {
       if (name == null || name.trim().isEmpty) continue;
       folder = await findOrCreate(name, parent: folder);
@@ -203,7 +170,7 @@ class GoogleDrive {
   }
 
   Future<File> findFolder(String path) async {
-    File folder = await rootFolder();
+    File folder = rootFolder;
     for (final name in (path ?? '').split('/')) {
       if (name == null || name.trim().isEmpty) continue;
       folder = await findFile(name, parent: folder);

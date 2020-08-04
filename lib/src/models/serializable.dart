@@ -11,19 +11,19 @@ abstract class Serializable {
   String _id;
   int _updatedAt;
   int _createdAt;
-  int _deletedAt;
-  bool _deleted;
+  int _archivedAt;
+  bool _archived;
 
   String get id => _id;
 
-  bool get deleted => _deleted ?? false;
+  bool get isArchived => _archived ?? false;
 
   DateTime get createdAt => DateTime.fromMillisecondsSinceEpoch(_createdAt);
 
   DateTime get updatedAt => DateTime.fromMillisecondsSinceEpoch(_updatedAt);
 
   DateTime get deletedAt =>
-      deleted ? DateTime.fromMillisecondsSinceEpoch(_deletedAt) : null;
+      isArchived ? DateTime.fromMillisecondsSinceEpoch(_archivedAt) : null;
 
   Serializable() : this.id(Crypto.generateId());
 
@@ -37,8 +37,8 @@ abstract class Serializable {
     writer.writeString(_id);
     writer.writeInt(_createdAt);
     writer.writeInt(_updatedAt);
-    writer.writeBool(_deleted);
-    writer.writeInt(_deletedAt);
+    writer.writeBool(_archived);
+    writer.writeInt(_archivedAt);
   }
 
   @mustCallSuper
@@ -48,8 +48,8 @@ abstract class Serializable {
         _id = reader.readString();
         _createdAt = reader.readInt();
         _updatedAt = reader.readInt();
-        _deleted = reader.readBool();
-        _deletedAt = reader.readInt();
+        _archived = reader.readBool();
+        _archivedAt = reader.readInt();
         break;
 
       default:
@@ -61,10 +61,10 @@ abstract class Serializable {
     _updatedAt = DateTime.now().millisecondsSinceEpoch;
   }
 
-  void markAsDeleted([bool deleted = true]) {
-    _deleted = deleted;
-    if (deleted) {
-      _deletedAt = DateTime.now().millisecondsSinceEpoch;
+  void setArchived([bool archived = true]) {
+    _archived = archived;
+    if (archived) {
+      _archivedAt = DateTime.now().millisecondsSinceEpoch;
     } else {
       _updatedAt = DateTime.now().millisecondsSinceEpoch;
     }

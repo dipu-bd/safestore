@@ -12,10 +12,16 @@ enum AuthEvent {
 class AuthState {
   bool loading = false;
   String loginError;
-  String email;
-  String username;
-  String picture;
-  bool userFound = false;
+  GoogleDrive drive;
+
+  bool get isLoggedIn => drive != null;
+  String get userId => drive?.user?.id;
+  String get email => drive?.user?.email;
+  String get username => drive?.user?.displayName;
+  String get picture => drive?.user?.photoUrl;
+  String get rootFolderId => drive?.rootFolder?.id;
+  String get rootFolderName => drive?.rootFolder?.name;
+  Map<String, String> get authHeaders => drive?.authHeaders;
 
   @override
   int get hashCode => email.hashCode;
@@ -47,7 +53,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   void logout() {
-    GoogleDrive().signOut();
     add(AuthEvent.purge);
   }
 
@@ -55,13 +60,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       state.loading = true;
       state.loginError = null;
-      state.userFound = false;
       notify();
-      final user = await GoogleDrive().signIn();
-      state.email = user.email;
-      state.username = user.displayName;
-      state.picture = user.photoUrl;
-      state.userFound = true;
+      state.drive = await GoogleDrive.signIn();
     } catch (err, stack) {
       log('$err', stackTrace: stack, name: '$this');
       state.loginError = '$err';

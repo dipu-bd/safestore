@@ -22,7 +22,7 @@ void handleSubmit(BuildContext context, SimpleNote note) async {
 
   // save and close
   final state = StoreBloc.of(context).state;
-  SimpleNote original = state.storage.find(note.id);
+  SimpleNote original = state.storage.getItem(note.id);
   if (original == null ||
       note.title != original.title ||
       note.body != original.body) {
@@ -32,7 +32,7 @@ void handleSubmit(BuildContext context, SimpleNote note) async {
 
 void handleNoteDelete(BuildContext context, SimpleNote note) async {
   bool confirm = true;
-  if (note.deleted) {
+  if (note.isArchived) {
     confirm = await showDialog(
       context: context,
       child: AlertDialog(

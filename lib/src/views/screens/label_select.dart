@@ -1,10 +1,9 @@
 import 'dart:async';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:safestore/src/blocs/store_bloc.dart';
-import 'package:safestore/src/utils/to_string.dart';
+import 'package:safestore/src/utils/formattings.dart';
 
 class LabelSelectScreen extends StatelessWidget {
   static Future show(BuildContext context, Set<String> selection) {
@@ -39,7 +38,7 @@ class LabelSelectScreen extends StatelessWidget {
               appBar: AppBar(
                 title: buildTagInput(context),
               ),
-              body: buildBody(state.storage.labels()),
+              body: buildBody(state.labels),
               floatingActionButton: FloatingActionButton(
                 onPressed: () => handleDone(context),
                 child: Icon(Icons.done),
@@ -103,9 +102,8 @@ class LabelSelectScreen extends StatelessWidget {
     labelText.clear();
     if (label.isNotEmpty) {
       final state = StoreBloc.of(context).state;
-      state.storage.addLabel(label);
+      state.labels.add(label);
       selection.add(label);
-      _changed.add(label);
       StoreBloc.of(context).notify();
     }
   }

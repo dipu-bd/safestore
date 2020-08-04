@@ -1,10 +1,9 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:safestore/src/blocs/store_bloc.dart';
-import 'package:safestore/src/utils/to_string.dart';
+import 'package:safestore/src/utils/formattings.dart';
 
 class AboutScreen extends StatelessWidget {
   static Future show(BuildContext context) {
@@ -63,7 +62,7 @@ class AboutScreen extends StatelessWidget {
         ),
         buildItem(
           key: 'Bin checksum (MD5)',
-          value: state.lastDriveMd5,
+          value: state.lastBinMd5,
         ),
         Divider(),
         buildItem(
@@ -76,24 +75,26 @@ class AboutScreen extends StatelessWidget {
         ),
         buildItem(
           key: 'Last Synced',
-          value: state.storage.lastSyncTime,
+          valueBuilder: () async => formatDuration(state.storage.lastUpdatedAt),
         ),
         Divider(),
         buildItem(
           key: 'Total items',
-          value: state.storage.totalItems,
+          value: state.notes.length,
         ),
         buildItem(
           key: 'Labels count',
-          valueBuilder: () async => state.storage.labels().length,
+          valueBuilder: () async => state.labels.length,
         ),
         buildItem(
           key: 'Visible notes count',
-          valueBuilder: () async => state.storage.notes().length,
+          valueBuilder: () async =>
+              state.notes.values.where((note) => !note.isArchived).length,
         ),
         buildItem(
           key: 'Archived notes count',
-          valueBuilder: () async => state.storage.archivedNotes().length,
+          valueBuilder: () async =>
+              state.notes.values.where((note) => note.isArchived).length,
         ),
         Divider(),
         buildImageItem(
