@@ -26,14 +26,12 @@ class GoogleDrive {
   ];
 
   DriveApi drive;
-  GoogleSignInAccount user;
-  Map<String, String> authHeaders;
+  Map<String, String> user = {};
+  Map<String, String> authHeaders = {};
   File rootFolder;
 
-  GoogleDrive._();
-
   static Future<GoogleDrive> signIn() async {
-    final instance = GoogleDrive._();
+    final instance = GoogleDrive();
     await instance.refreshToken();
     return instance;
   }
@@ -41,14 +39,24 @@ class GoogleDrive {
   Future<void> refreshToken() async {
     final googleSignIn = GoogleSignIn.standard(scopes: authScopes);
     log('Signing in to google...');
-    user = await googleSignIn.signIn();
-    log('Email: ${user.email}');
-    authHeaders = await user.authHeaders;
+    final googleUser = await googleSignIn.signIn();
+    user = {
+      'id': googleUser.id,
+      'email': googleUser.email,
+      'name': googleUser.displayName,
+      'image': googleUser.photoUrl,
+    };
+    log('User: $user');
+    authHeaders = await googleUser.authHeaders;
     log('Headers: $authHeaders');
+    initDrive();
+    return drive;
+  }
+
+  Future<void> initDrive() async {
     drive = DriveApi(GoogleHttpClient(authHeaders));
     rootFolder = await findOrCreate(rootFolderName);
-    log('Root folder id: ${rootFolder?.id}');
-    return drive;
+    log('Root folder id: ${rootFolder.id}');
   }
 
   // ---------------------------------------------------------------------------

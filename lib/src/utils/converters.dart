@@ -20,26 +20,32 @@ String formatFileSize(num lengthInBytes, {suffixes = FILE_SIZE_SUFFIX}) {
 }
 
 String formatDuration(
-  DateTime time, {
+  Duration duration, {
   String suffix = " ago",
   int maxParts = 2,
-  parts = DURATION_PARTS,
+  String separator = ' ',
+  List<List<String>> names = DURATION_PARTS,
 }) {
-  final diff = DateTime.now().difference(time);
+  duration ??= Duration.zero;
+  int days = duration.inDays;
+  int hours = duration.inHours - 24 * duration.inDays;
+  int minutes = duration.inMinutes - 60 * duration.inHours;
+  int seconds = duration.inSeconds - 60 * duration.inMinutes;
+
   List<String> parts = [];
-  if (diff.inDays > 0) {
-    parts.add('${diff.inDays}${parts[diff.inDays > 1 ? 1 : 0]}');
+  if (days > 0) {
+    parts.add('$days${names[0][days > 1 ? 1 : 0]}');
   }
-  if (diff.inHours > 0) {
-    parts.add('${diff.inHours}${parts[diff.inHours > 1 ? 1 : 0]}');
+  if (hours > 0) {
+    parts.add('$hours${names[1][hours > 1 ? 1 : 0]}');
   }
-  if (diff.inMinutes > 0) {
-    parts.add('${diff.inMinutes}${parts[diff.inMinutes > 1 ? 1 : 0]}');
+  if (minutes > 0) {
+    parts.add('$minutes${names[2][minutes > 1 ? 1 : 0]}');
   }
-  if (diff.inSeconds > 0) {
-    parts.add('${diff.inSeconds}${parts[diff.inSeconds > 1 ? 1 : 0]}');
+  if (seconds > 0 || parts.isEmpty) {
+    parts.add('$seconds${names[3][seconds > 1 ? 1 : 0]}');
   }
-  return parts.take(maxParts).join(' ') + (suffix ?? '');
+  return parts.take(maxParts).join(separator) + (suffix ?? '');
 }
 
 String toTitleCase(String value) {

@@ -32,7 +32,16 @@ class PasswordScreen extends StatelessWidget {
             if (state.loading || state.passwordError != null) {
               return Center(child: CircularProgressIndicator());
             }
-            return buildPasswordForm(context, state);
+            return WillPopScope(
+              child: buildPasswordForm(context, state),
+              onWillPop: () async {
+                if (state.isPasswordReady) {
+                  StoreBloc.of(context).clear();
+                  return false;
+                }
+                return true;
+              },
+            );
           },
         ),
       ),
@@ -67,7 +76,8 @@ class PasswordScreen extends StatelessWidget {
         Divider(height: 40),
         RaisedButton(
           color: Colors.blueGrey[700],
-          child: Text('Enter'),
+          child:
+              Text(state.isPasswordReady ? 'Confirm and Continue' : 'Continue'),
           onPressed: () => handleSubmit(context),
         ),
         SizedBox(height: kToolbarHeight),

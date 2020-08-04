@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'dart:developer';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:googleapis/drive/v3.dart';
 import 'package:safestore/src/blocs/auth_bloc.dart';
 import 'package:safestore/src/models/simple_note.dart';
@@ -43,6 +45,8 @@ class StoreState {
 
   bool get isBinReady => storage != null && !loading;
 
+  DateTime get lastSyncAt => DateTime.fromMillisecondsSinceEpoch(lastSyncTime);
+
   @override
   int get hashCode => super.hashCode;
 
@@ -54,9 +58,51 @@ class StoreBloc extends Bloc<StoreEvent, StoreState> {
   static StoreBloc of(BuildContext context) =>
       BlocProvider.of<StoreBloc>(context);
 
+  final storage = FlutterSecureStorage();
   BuildContext context;
 
-  StoreBloc(this.context) : super(StoreState());
+  StoreBloc(this.context) : super(StoreState()) {
+    loadFromStore();
+  }
+
+  Future<void> loadFromStore() async {
+    try {
+      state.loading = true;
+      final value = await storage.read(key: '$this');
+      if (value == null || value.isEmpty) return;
+      final data = json.decode(value) ?? {};
+      print(data);
+      state.currentLabel = data['current'];
+      state.binName = data['bin'];
+      (data['labels'] as List).forEach((v) => state.labels.add(v));
+      state.passwordHash = Uint8List.fromList(data['password'].codeUnits);
+      if (state.binName != null) {
+        print('Opening bin file');
+        state.binFile = await drive.findFile(
+          state.binName,
+          parent: drive.rootFolder,
+        );
+      }
+      if (state.binFile != null) {
+        print('creating storage');
+        await _createStorage();
+      }
+      state.loading = false;
+      notify();
+    } catch (err) {
+      log('$err', name: '$this');
+    }
+  }
+
+  Future<void> saveToStore() async {
+    final data = Map<String, dynamic>();
+    data['current'] = state.currentLabel;
+    data['labels'] = state.labels.toList();
+    data['bin'] = state.binName;
+    data['password'] = String.fromCharCodes(state.passwordHash);
+    final value = json.encode(data);
+    await storage.write(key: '$this', value: value);
+  }
 
   GoogleDrive get drive {
     final auth = AuthBloc.of(context).state;
@@ -80,6 +126,7 @@ class StoreBloc extends Bloc<StoreEvent, StoreState> {
         yield StoreState();
         break;
     }
+    saveToStore();
   }
 
   void notify() {
@@ -97,6 +144,7 @@ class StoreBloc extends Bloc<StoreEvent, StoreState> {
 
   Future<void> _createStorage() async {
     // create a storage
+    log('Creating new storage', name: '$this');
     state.storage?.close();
     state.storage = SerializableStore(state.notes);
     // do a immediate sync
@@ -113,14 +161,15 @@ class StoreBloc extends Bloc<StoreEvent, StoreState> {
   }
 
   Future<bool> _checkDriveError(err) async {
-//    if (err is ApiRequestError) {
-//      try {
-//        await drive.refreshToken();
-//        return true;
-//      } catch (err) {
-//        return false;
-//      }
-//    }
+    if (err is DetailedApiRequestError &&
+        err.message == 'Invalid Credentials') {
+      try {
+        await drive.refreshToken();
+        return true;
+      } catch (err) {
+        return false;
+      }
+    }
     return false;
   }
 
@@ -173,6 +222,7 @@ class StoreBloc extends Bloc<StoreEvent, StoreState> {
       state.binFile = await drive.createFile(
         state.binName,
         parent: drive.rootFolder,
+        isFile: true,
       );
       if (state.binFile == null) {
         throw Exception('No bin was created');
@@ -202,13 +252,11 @@ class StoreBloc extends Bloc<StoreEvent, StoreState> {
       notify();
 
       // first try importing
-      state.binFile = await drive.findFile(
+      state.binFile = await drive.findOrCreate(
         state.binName,
         parent: drive.rootFolder,
+        isFile: true,
       );
-      if (state.binFile == null) {
-        throw Exception('No such bin found');
-      }
       if (state.binFile.md5Checksum != state.lastBinMd5) {
         final cipher = await drive.downloadFile(state.binFile);
         final plain = Crypto.decrypt(cipher, state.passwordHash);
@@ -219,12 +267,12 @@ class StoreBloc extends Bloc<StoreEvent, StoreState> {
 
       // now try to exporting
       final data = state.storage.export();
+      state.dataVolumeSize = data.length;
       final checksum = Crypto.md5(data);
       if (checksum != state.lastDataMd5) {
         final cipher = Crypto.encrypt(data, state.passwordHash);
         await drive.uploadFile(state.binFile, cipher);
         state.lastDataMd5 = checksum;
-        state.dataVolumeSize = cipher.length;
       }
 
       // set last successful sync time

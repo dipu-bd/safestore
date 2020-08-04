@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:safestore/src/services/google_drive.dart';
 
 enum AuthEvent {
@@ -15,13 +17,20 @@ class AuthState {
   GoogleDrive drive;
 
   bool get isLoggedIn => drive != null;
-  String get userId => drive?.user?.id;
-  String get email => drive?.user?.email;
-  String get username => drive?.user?.displayName;
-  String get picture => drive?.user?.photoUrl;
-  String get rootFolderId => drive?.rootFolder?.id;
-  String get rootFolderName => drive?.rootFolder?.name;
+
+  Map<String, String> get user => drive?.user;
+
   Map<String, String> get authHeaders => drive?.authHeaders;
+
+  String get userId => drive?.user['id'];
+
+  String get email => drive?.user['email'];
+
+  String get username => drive?.user['name'];
+
+  String get picture => drive?.user['image'];
+
+  String get rootFolderId => drive?.rootFolder?.id;
 
   @override
   int get hashCode => email.hashCode;
@@ -31,10 +40,45 @@ class AuthState {
 }
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  AuthBloc() : super(AuthState());
-
   static AuthBloc of(BuildContext context) =>
       BlocProvider.of<AuthBloc>(context);
+
+  final storage = FlutterSecureStorage();
+
+  AuthBloc() : super(AuthState()) {
+    loadFromStore();
+  }
+
+  Future<void> loadFromStore() async {
+    try {
+      state.loading = true;
+      final value = await storage.read(key: '$this');
+      if (value == null || value.isEmpty) return;
+      final data = json.decode(value) ?? {};
+      print(data);
+      final drive = GoogleDrive();
+      (data['user'] as Map)?.entries?.forEach((entry) {
+        drive.user[entry.key] = entry.value;
+      });
+      (data['auth'] as Map)?.entries?.forEach((entry) {
+        drive.authHeaders[entry.key] = entry.value;
+      });
+      await drive.initDrive();
+      state.drive = drive;
+      state.loading = false;
+      notify();
+    } catch (err) {
+      log('$err', name: '$this');
+    }
+  }
+
+  Future<void> saveToStore() async {
+    final data = Map<String, dynamic>();
+    data['user'] = state.user;
+    data['auth'] = state.authHeaders;
+    final value = json.encode(data);
+    await storage.write(key: '$this', value: value);
+  }
 
   @override
   Stream<AuthState> mapEventToState(AuthEvent event) async* {
@@ -46,6 +90,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         yield AuthState();
         break;
     }
+    saveToStore();
   }
 
   void notify() {

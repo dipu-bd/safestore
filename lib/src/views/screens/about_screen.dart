@@ -2,8 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:safestore/src/blocs/auth_bloc.dart';
 import 'package:safestore/src/blocs/store_bloc.dart';
-import 'package:safestore/src/utils/formattings.dart';
+import 'package:safestore/src/services/google_drive.dart';
+import 'package:safestore/src/utils/converters.dart';
+
+class CounterCubit extends Cubit<int> {
+  bool closed = false;
+
+  CounterCubit() : super(0) {
+    loop();
+  }
+
+  @override
+  Future<void> close() {
+    closed = true;
+    return super.close();
+  }
+
+  void loop() async {
+    while (!closed) {
+      await Future.delayed(Duration(seconds: 1));
+      emit(state + 1);
+    }
+  }
+}
 
 class AboutScreen extends StatelessWidget {
   static Future show(BuildContext context) {
@@ -18,29 +41,33 @@ class AboutScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<StoreBloc, StoreState>(
-      builder: (context, state) {
-        return SafeArea(
-          top: false,
-          child: Scaffold(
-            appBar: buildAppBar(state),
-            body: buildContent(state),
-          ),
-        );
-      },
+    return BlocProvider(
+      create: (_) => CounterCubit(),
+      child: BlocBuilder<CounterCubit, int>(
+        builder: (context, state) {
+          return SafeArea(
+            top: false,
+            child: Scaffold(
+              appBar: buildAppBar(context),
+              body: buildContent(context),
+            ),
+          );
+        },
+      ),
     );
   }
 
-  Widget buildAppBar(StoreState state) {
+  Widget buildAppBar(BuildContext context) {
+    final store = StoreBloc.of(context).state;
     return AppBar(
       title: Text(
-        'About',
+        'System Info',
         style: GoogleFonts.anticSlab(
           fontWeight: FontWeight.bold,
           letterSpacing: 1.5,
         ),
       ),
-      bottom: state.syncing
+      bottom: store.syncing
           ? PreferredSize(
               preferredSize: Size.fromHeight(5),
               child: SizedBox(
@@ -52,49 +79,57 @@ class AboutScreen extends StatelessWidget {
     );
   }
 
-  Widget buildContent(StoreState state) {
+  Widget buildContent(BuildContext context) {
+    final auth = AuthBloc.of(context).state;
+    final store = StoreBloc.of(context).state;
     return ListView(
       padding: EdgeInsets.all(10).copyWith(bottom: 50),
       children: <Widget>[
         buildItem(
-          key: 'Bin ID',
-          value: state.binName,
-        ),
-        buildItem(
-          key: 'Bin checksum (MD5)',
-          value: state.lastBinMd5,
-        ),
-        Divider(),
-        buildItem(
-          key: 'Data size',
-          value: formatFileSize(state.dataVolumeSize),
-        ),
-        buildItem(
-          key: 'Data checksum (MD5)',
-          value: state.lastDataMd5,
-        ),
-        buildItem(
-          key: 'Last Synced',
-          valueBuilder: () async => formatDuration(state.storage.lastUpdatedAt),
-        ),
-        Divider(),
-        buildItem(
           key: 'Total items',
-          value: state.notes.length,
+          value: store.notes.length,
         ),
         buildItem(
           key: 'Labels count',
-          valueBuilder: () async => state.labels.length,
+          value: store.labels.length,
         ),
         buildItem(
           key: 'Visible notes count',
-          valueBuilder: () async =>
-              state.notes.values.where((note) => !note.isArchived).length,
+          value: store.notes.values.where((note) => !note.isArchived).length,
         ),
         buildItem(
           key: 'Archived notes count',
-          valueBuilder: () async =>
-              state.notes.values.where((note) => note.isArchived).length,
+          value: store.notes.values.where((note) => note.isArchived).length,
+        ),
+        Divider(),
+        buildItem(
+          key: 'Last Synced',
+          value: formatDuration(DateTime.now().difference(store.lastSyncAt)),
+        ),
+        buildItem(
+          key: 'Data size (compressed)',
+          value: formatFileSize(store.dataVolumeSize),
+        ),
+        buildItem(
+          key: 'Data checksum (MD5)',
+          value: store.lastDataMd5,
+        ),
+        Divider(),
+        buildItem(
+          key: 'Bin ID',
+          value: store.binName,
+        ),
+        buildItem(
+          key: 'Bin checksum (MD5)',
+          value: store.lastBinMd5,
+        ),
+        buildItem(
+          key: 'Bin file version',
+          value: store.binFile?.version,
+        ),
+        buildItem(
+          key: 'Bin file size',
+          value: formatFileSize(double.tryParse(store.binFile?.size)),
         ),
         Divider(),
         buildImageItem(
@@ -103,11 +138,28 @@ class AboutScreen extends StatelessWidget {
           image: Container(
             padding: EdgeInsets.only(top: 10),
             child: QrImage(
-              data: String.fromCharCodes(state.passwordHash),
+              data: String.fromCharCodes(store.passwordHash),
               backgroundColor: Colors.white,
               size: 180,
             ),
           ),
+        ),
+        Divider(),
+        buildItem(
+          key: 'Google Drive user',
+          value: auth.username,
+        ),
+        buildItem(
+          key: 'Email address',
+          value: auth.email,
+        ),
+        buildItem(
+          key: 'Backup folder in Google Drive',
+          value: GoogleDrive.rootFolderName,
+        ),
+        buildItem(
+          key: 'Authentication',
+          value: auth.authHeaders,
         ),
       ],
     );
@@ -122,18 +174,18 @@ class AboutScreen extends StatelessWidget {
         children: <Widget>[
           image,
           SizedBox(height: 5),
-          buildSubtitle(subtitle),
+          buildSubtitle(subtitle, 12),
         ],
       ),
     );
   }
 
-  Widget buildItem({key, value, Future Function() valueBuilder}) {
+  Widget buildItem({key, value, Future Function() future}) {
     Widget title = buildTitle(key);
     Widget subtitle = buildSubtitle(value);
-    if (valueBuilder != null) {
+    if (future != null) {
       subtitle = FutureBuilder(
-        future: valueBuilder(),
+        future: future(),
         builder: (_, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
             return buildErrorText('Loading...');
@@ -160,11 +212,12 @@ class AboutScreen extends StatelessWidget {
     );
   }
 
-  Widget buildSubtitle(value) {
+  Widget buildSubtitle(value, [double fontSize]) {
     return Text(
       '$value',
       style: GoogleFonts.firaMono(
         color: Colors.lime[100],
+        fontSize: fontSize,
       ),
     );
   }

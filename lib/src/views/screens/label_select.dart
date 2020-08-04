@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:safestore/src/blocs/store_bloc.dart';
-import 'package:safestore/src/utils/formattings.dart';
+import 'package:safestore/src/utils/converters.dart';
 
 class LabelSelectScreen extends StatelessWidget {
   static Future show(BuildContext context, Set<String> selection) {

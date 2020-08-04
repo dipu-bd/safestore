@@ -12,14 +12,31 @@ class NoteListScreen extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Scaffold(
-        appBar: buildAppBar(context),
         drawer: MainDrawer(),
+        appBar: buildAppBar(context),
         floatingActionButton: buildFAB(context),
         body: RefreshIndicator(
           onRefresh: () => handleRefresh(context),
           child: buildContent(context),
         ),
       ),
+    );
+  }
+
+  Widget buildFAB(BuildContext context) {
+    final store = StoreBloc.of(context).state;
+    if (store.currentLabel == SimpleNote.LABEL_ARCHIVE) {
+      return null;
+    }
+    return FloatingActionButton(
+      child: Icon(Icons.add),
+      onPressed: () {
+        final newNote = SimpleNote();
+        if (store.currentLabel != SimpleNote.LABEL_DEFAULT) {
+          newNote.labels.add(store.currentLabel);
+        }
+        NoteEditDialog.show(context, newNote);
+      },
     );
   }
 
@@ -51,27 +68,13 @@ class NoteListScreen extends StatelessWidget {
     );
   }
 
-  Widget buildFAB(BuildContext context) {
-    final store = StoreBloc.of(context).state;
-    if (store.currentLabel == SimpleNote.LABEL_ARCHIVE) {
-      return null;
-    }
-    return FloatingActionButton(
-      child: Icon(Icons.add),
-      onPressed: () => NoteEditDialog.show(
-        context,
-        SimpleNote()..labels.add(store.currentLabel),
-      ),
-    );
-  }
-
   Widget buildContent(BuildContext context) {
     final state = StoreBloc.of(context).state;
-    final label = state.currentLabel ?? 'All';
+    final label = state.currentLabel;
     final notes = state.storage.find((note) {
       if (label == SimpleNote.LABEL_ARCHIVE && note.isArchived) return true;
       if (note.isArchived) return false;
-      if (label == 'All') return true;
+      if (label == SimpleNote.LABEL_DEFAULT) return true;
       return (note.labels.contains(label));
     });
 
