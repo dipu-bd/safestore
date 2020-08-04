@@ -69,6 +69,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       notify();
     } catch (err) {
       log('$err', name: '$this');
+      state.loading = false;
     }
   }
 

@@ -91,6 +91,7 @@ class StoreBloc extends Bloc<StoreEvent, StoreState> {
       notify();
     } catch (err) {
       log('$err', name: '$this');
+      state.loading = false;
     }
   }
 
