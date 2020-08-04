@@ -3,9 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:safestore/src/blocs/store_bloc.dart';
 import 'package:safestore/src/models/simple_note.dart';
 import 'package:safestore/src/views/screens/label_select.dart';
-
-import 'file:///C:/Users/Dipu/Projects/safestore/lib/src/views/widgets/notes/note_edit_form.dart';
-import 'file:///C:/Users/Dipu/Projects/safestore/lib/src/views/widgets/notes/note_utils.dart';
+import 'package:safestore/src/views/widgets/notes/note_edit_form.dart';
+import 'package:safestore/src/views/widgets/notes/note_utils.dart';
 
 class NoteEditDialog extends StatelessWidget {
   static Future<void> show(BuildContext context, SimpleNote note) async {

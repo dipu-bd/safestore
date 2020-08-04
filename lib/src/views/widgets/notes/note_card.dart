@@ -5,8 +5,7 @@ import 'package:safestore/src/blocs/store_bloc.dart';
 import 'package:safestore/src/models/simple_note.dart';
 import 'package:safestore/src/views/screens/label_select.dart';
 import 'package:safestore/src/views/screens/note_edit.dart';
-
-import 'file:///C:/Users/Dipu/Projects/safestore/lib/src/views/widgets/notes/note_utils.dart';
+import 'package:safestore/src/views/widgets/notes/note_utils.dart';
 
 class NoteCard extends StatelessWidget {
   final SimpleNote note;
