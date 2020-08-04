@@ -71,38 +71,47 @@ class StoreBloc extends Bloc<StoreEvent, StoreState> {
       final value = await storage.read(key: '$this');
       if (value == null || value.isEmpty) return;
       final data = json.decode(value) ?? {};
-      print(data);
-      state.currentLabel = data['current'];
-      state.binName = data['bin'];
-      (data['labels'] as List).forEach((v) => state.labels.add(v));
-      state.passwordHash = Uint8List.fromList(data['password'].codeUnits);
+      if (data['password'] != null) {
+        state.passwordHash = Uint8List.fromList(data['password'].codeUnits);
+        state.binName = data['bin'];
+      }
       if (state.binName != null) {
-        print('Opening bin file');
         state.binFile = await drive.findFile(
           state.binName,
           parent: drive.rootFolder,
         );
       }
       if (state.binFile != null) {
-        print('creating storage');
         await _createStorage();
       }
-      state.loading = false;
-      notify();
+      if (state.isBinReady) {
+        state.currentLabel = data['current'];
+        (data['labels'] as List)?.forEach((v) => state.labels.add(v));
+      }
     } catch (err) {
       log('$err', name: '$this');
+    } finally {
       state.loading = false;
+      notify();
     }
   }
 
   Future<void> saveToStore() async {
-    final data = Map<String, dynamic>();
-    data['current'] = state.currentLabel;
-    data['labels'] = state.labels.toList();
-    data['bin'] = state.binName;
-    data['password'] = String.fromCharCodes(state.passwordHash);
-    final value = json.encode(data);
-    await storage.write(key: '$this', value: value);
+    try {
+      final data = Map<String, dynamic>();
+      if (state.isPasswordReady) {
+        data['password'] = String.fromCharCodes(state.passwordHash);
+        data['bin'] = state.binName;
+      }
+      if (state.isBinReady) {
+        data['current'] = state.currentLabel;
+        data['labels'] = state.labels.toList();
+      }
+      final value = json.encode(data);
+      await storage.write(key: '$this', value: value);
+    } catch (err) {
+      log('$err', name: '$this');
+    }
   }
 
   GoogleDrive get drive {

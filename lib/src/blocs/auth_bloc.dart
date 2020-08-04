@@ -55,7 +55,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final value = await storage.read(key: '$this');
       if (value == null || value.isEmpty) return;
       final data = json.decode(value) ?? {};
-      print(data);
       final drive = GoogleDrive();
       (data['user'] as Map)?.entries?.forEach((entry) {
         drive.user[entry.key] = entry.value;
@@ -65,11 +64,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       });
       await drive.initDrive();
       state.drive = drive;
-      state.loading = false;
-      notify();
     } catch (err) {
       log('$err', name: '$this');
+      state.drive = null;
+    } finally {
       state.loading = false;
+      notify();
     }
   }
 
