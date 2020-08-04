@@ -29,29 +29,13 @@ class PasswordScreen extends StatelessWidget {
         ),
         body: BlocBuilder<StoreBloc, StoreState>(
           builder: (context, state) {
-            if (state.loading) {
+            if (state.loading || state.passwordError != null) {
               return Center(child: CircularProgressIndicator());
-            }
-            if (state.passwordError != null) {
-              return buildError(context, state);
             }
             return buildPasswordForm(context, state);
           },
         ),
       ),
-    );
-  }
-
-  Widget buildError(BuildContext context, StoreState state) {
-    return AlertDialog(
-      title: Text('Password Error'),
-      content: Text(state.passwordError ?? 'Something went wrong!'),
-      actions: <Widget>[
-        FlatButton(
-          child: Text('Close'),
-          onPressed: () => StoreBloc.of(context).clear(),
-        )
-      ],
     );
   }
 
@@ -61,10 +45,13 @@ class PasswordScreen extends StatelessWidget {
     return ListView(
       padding: EdgeInsets.all(20),
       children: <Widget>[
-        SizedBox(height: 200),
-        CircleAvatar(
-          radius: 64,
-          backgroundImage: CachedNetworkImageProvider(auth.picture),
+        SizedBox(height: kToolbarHeight),
+        Container(
+          alignment: Alignment.center,
+          child: CircleAvatar(
+            radius: 64,
+            backgroundImage: CachedNetworkImageProvider(auth.picture),
+          ),
         ),
         SizedBox(height: 10),
         Text(
@@ -73,24 +60,22 @@ class PasswordScreen extends StatelessWidget {
             fontSize: 28,
             color: Colors.amber,
           ),
+          textAlign: TextAlign.center,
         ),
         Divider(height: 40),
-        buildPasswordInput(state),
+        buildPasswordInput(context, state),
         Divider(height: 40),
         RaisedButton(
-          color: Colors.blueGrey,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 50.0),
-            child: Text('Enter'),
-          ),
+          color: Colors.blueGrey[700],
+          child: Text('Enter'),
           onPressed: () => handleSubmit(context),
         ),
-        SizedBox(height: 200),
+        SizedBox(height: kToolbarHeight),
       ],
     );
   }
 
-  Widget buildPasswordInput(StoreState state) {
+  Widget buildPasswordInput(BuildContext context, StoreState state) {
     return TextField(
       obscureText: true,
       focusNode: passwordFocus,
@@ -107,11 +92,12 @@ class PasswordScreen extends StatelessWidget {
             : 'Confirm your bin key',
         counterText: 'Never share this with anyone',
       ),
-      onSubmitted: (_) => passwordFocus.unfocus(),
+      onSubmitted: (_) => handleSubmit(context),
     );
   }
 
   void handleSubmit(BuildContext context) {
+    passwordFocus.unfocus();
     final state = StoreBloc.of(context).state;
     if (state.passwordHash == null) {
       StoreBloc.of(context).openBin(textController.text);
@@ -121,6 +107,7 @@ class PasswordScreen extends StatelessWidget {
   }
 
   void handleLogout(BuildContext context) {
+    passwordFocus.unfocus();
     StoreBloc.of(context).clear();
     AuthBloc.of(context).logout();
   }

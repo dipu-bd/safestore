@@ -66,13 +66,14 @@ class MainDrawer extends StatelessWidget {
 
   Widget buildMenu(BuildContext context) {
     final state = StoreBloc.of(context).state;
+    final labels = state.labels.where((e) => e.isNotEmpty);
     return ListView(
       padding: EdgeInsets.all(10),
       children: <Widget>[
         buildLabel(context, SimpleNote.LABEL_DEFAULT),
         buildLabel(context, SimpleNote.LABEL_ARCHIVE),
-        state.labels.isNotEmpty ? Divider() : Container(),
-        ...state.labels.map((label) => buildLabel(context, label)),
+        labels.isNotEmpty ? Divider() : Container(),
+        ...labels.map((label) => buildLabel(context, label)),
         Divider(),
         ListTile(
           leading: Icon(Icons.trending_up),

@@ -14,32 +14,12 @@ class LoginScreen extends StatelessWidget {
             alignment: Alignment.center,
             padding: EdgeInsets.all(15),
             height: MediaQuery.of(context).size.height - 24,
-            child: state.loading
-                ? buildLoading(context)
-                : state.loginError != null && state.loginError.isNotEmpty
-                    ? buildError(context)
-                    : buildLoginForm(),
+            child: state.loading || state.loginError != null
+                ? CircularProgressIndicator()
+                : buildLoginForm(),
           ),
         ),
       ),
-    );
-  }
-
-  Widget buildLoading(BuildContext context) {
-    return CircularProgressIndicator();
-  }
-
-  Widget buildError(BuildContext context) {
-    final state = AuthBloc.of(context).state;
-    return AlertDialog(
-      title: Text('Login Error'),
-      content: Text(state.loginError ?? 'Something went wrong!'),
-      actions: <Widget>[
-        FlatButton(
-          child: Text('Close'),
-          onPressed: () => AuthBloc.of(context).logout(),
-        )
-      ],
     );
   }
 

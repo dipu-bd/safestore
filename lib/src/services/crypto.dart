@@ -76,7 +76,6 @@ abstract class Crypto {
     );
 
     derivator.init(params);
-
     final hashBytes = derivator.process(
       Uint8List.fromList(utf8.encode(password)),
     );

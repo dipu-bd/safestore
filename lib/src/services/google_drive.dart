@@ -56,10 +56,10 @@ class GoogleDrive {
   Future<File> findFile(String name, {File parent}) async {
     assert(name != null && name.isNotEmpty);
     assert(!name.contains('/'));
-    log('Looking for "$name"', name: '$this');
+    log('Looking for "$name" in ${parent?.name}', name: '$this');
     final files = await drive.files.list(
       spaces: 'drive',
-      $fields: 'files(id, name, mimeType, description, md5Checksum)',
+      $fields: '*',
       q: "name = '$name' and trashed = false" +
           (parent != null ? " and '${parent.id}' in parents" : ""),
     );
@@ -90,7 +90,10 @@ class GoogleDrive {
     }
 
     log('Create "${req.toJson()}"', name: '$this');
-    final file = await drive.files.create(req);
+    final file = await drive.files.create(
+      req,
+      $fields: '*',
+    );
     return file;
   }
 
@@ -101,7 +104,7 @@ class GoogleDrive {
   }) async {
     var file = await findFile(name, parent: parent);
     if (file == null) {
-      log('Not found "$name"', name: '$this');
+      log('Not found "$name" in ${parent?.name}', name: '$this');
       file = await createFile(
         name,
         parent: parent,
@@ -120,8 +123,7 @@ class GoogleDrive {
       downloadOptions: DownloadOptions.FullMedia,
     );
 
-    log('Get "${media.length}" bytes from "${file.description}"',
-        name: '$this');
+    log('Get "${media.length}" bytes from "${file.name}"', name: '$this');
     final sink = List<int>();
     await media.stream.forEach((data) {
       sink.addAll(data);
@@ -137,16 +139,11 @@ class GoogleDrive {
       throw new Exception('No such file');
     }
 
-    final req = File();
-    req.name = dest.name;
-    req.parents = dest.parents;
-    req.mimeType = 'application/x-binary';
-    req.description = dest.description;
-
-    log('Upload ${data.length} bytes to "${req.description}"', name: '$this');
+    log('Upload ${data.length} bytes to "${dest.name}"', name: '$this');
     final file = await drive.files.update(
-      req,
+      File(),
       dest.id,
+      $fields: '*',
       uploadMedia: Media(Stream.value(data.toList()), data.length),
     );
     return file;
@@ -154,7 +151,7 @@ class GoogleDrive {
 
   Future<void> deleteFile(File file) async {
     if (file == null) return;
-    log("Deleting ${file.description}", name: '$this');
+    log("Deleting ${file.name}", name: '$this');
     await drive.files.delete(file.id);
   }
 

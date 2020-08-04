@@ -35,7 +35,7 @@ class SimpleNote extends Serializable {
         body = reader.readString();
         var list = reader.readStringList();
         labels.clear();
-        labels.addAll(list);
+        list.where((e) => e.isNotEmpty).map(labels.add);
         break;
 
       default:

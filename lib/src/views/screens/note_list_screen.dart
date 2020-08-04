@@ -53,6 +53,9 @@ class NoteListScreen extends StatelessWidget {
 
   Widget buildFAB(BuildContext context) {
     final store = StoreBloc.of(context).state;
+    if (store.currentLabel == SimpleNote.LABEL_ARCHIVE) {
+      return null;
+    }
     return FloatingActionButton(
       child: Icon(Icons.add),
       onPressed: () => NoteEditDialog.show(
@@ -74,10 +77,12 @@ class NoteListScreen extends StatelessWidget {
 
     if (notes.isEmpty) {
       return Center(
-        child: Text(
-          'No notes found in $label',
-          style: TextStyle(color: Colors.grey),
-        ),
+        child: state.syncing
+            ? CircularProgressIndicator()
+            : Text(
+                'No notes found in $label',
+                style: TextStyle(color: Colors.grey),
+              ),
       );
     }
     return ListView(

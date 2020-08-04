@@ -35,8 +35,15 @@ class App extends StatelessWidget {
 
   Widget buildAuthPage() {
     return BlocBuilder<AuthBloc, AuthState>(
-      builder: (_, state) => withAnimatedSwitcher(
+      builder: (context, state) => withAnimatedSwitcher(
         () {
+          if (state.loginError != null) {
+            return buildError(
+              state.loginError,
+              title: 'Login Error',
+              onClose: (context) => AuthBloc.of(context).logout(),
+            );
+          }
           if (!state.isLoggedIn) {
             return LoginScreen();
           }
@@ -48,8 +55,22 @@ class App extends StatelessWidget {
 
   Widget buildHomePage() {
     return BlocBuilder<StoreBloc, StoreState>(
-      builder: (_, state) => withAnimatedSwitcher(
+      builder: (context, state) => withAnimatedSwitcher(
         () {
+          if (state.passwordError != null) {
+            return buildError(
+              state.passwordError,
+              title: 'Password Error',
+              onClose: (context) => StoreBloc.of(context).clear(),
+            );
+          }
+          if (state.syncError != null) {
+            return buildError(
+              state.syncError,
+              title: 'Sync Error',
+              onClose: (context) => StoreBloc.of(context).sync(),
+            );
+          }
           if (!state.isBinReady) {
             return PasswordScreen();
           }
@@ -63,6 +84,23 @@ class App extends StatelessWidget {
     return AnimatedSwitcher(
       child: builder(),
       duration: duration ?? Duration(milliseconds: 500),
+    );
+  }
+
+  Widget buildError(error, {title, Function(BuildContext) onClose}) {
+    return Builder(
+      builder: (context) => Scaffold(
+        body: AlertDialog(
+          title: Text('${title ?? 'Error'}'),
+          content: Text('$error'),
+          actions: <Widget>[
+            FlatButton(
+              child: Text('Close'),
+              onPressed: () => onClose(context),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

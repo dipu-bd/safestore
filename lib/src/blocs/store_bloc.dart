@@ -1,6 +1,7 @@
 import 'dart:developer';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:googleapis/drive/v3.dart';
@@ -11,7 +12,6 @@ import 'package:safestore/src/services/google_drive.dart';
 import 'package:safestore/src/services/serializable_store.dart';
 
 enum StoreEvent {
-  sync,
   notify,
   purge,
 }
@@ -24,16 +24,13 @@ class StoreState {
   String binName;
   File binFile;
 
-  bool get isPasswordReady => passwordHash != null;
-  bool get isBinReady => binFile?.id != null;
-
   final labels = Set<String>();
   final notes = Map<String, SimpleNote>();
   SerializableStore<SimpleNote> storage;
 
   bool syncing = false;
   String syncError;
-  int lastSync = 0;
+  int lastSyncTime = 0;
   bool syncPending = false;
 
   String lastBinMd5;
@@ -41,6 +38,10 @@ class StoreState {
   int dataVolumeSize;
 
   String currentLabel;
+
+  bool get isPasswordReady => passwordHash != null && !loading;
+
+  bool get isBinReady => storage != null && !loading;
 
   @override
   int get hashCode => super.hashCode;
@@ -70,7 +71,6 @@ class StoreBloc extends Bloc<StoreEvent, StoreState> {
 
   @override
   Stream<StoreState> mapEventToState(StoreEvent event) async* {
-    int currentTime = DateTime.now().millisecondsSinceEpoch;
     switch (event) {
       case StoreEvent.notify:
         yield state;
@@ -79,24 +79,7 @@ class StoreBloc extends Bloc<StoreEvent, StoreState> {
         state.storage?.close();
         yield StoreState();
         break;
-      case StoreEvent.sync:
-        if (!state.syncPending) break;
-        if (state.syncing || currentTime - state.lastSync < 5 * 1000) {
-          Future.delayed(
-            Duration(milliseconds: 100),
-            () => add(StoreEvent.sync),
-          );
-        } else {
-          state.syncPending = false;
-          syncNow();
-        }
-        break;
     }
-  }
-
-  void sync() {
-    state.syncPending = true;
-    add(StoreEvent.sync);
   }
 
   void notify() {
@@ -105,6 +88,40 @@ class StoreBloc extends Bloc<StoreEvent, StoreState> {
 
   void clear() {
     add(StoreEvent.purge);
+  }
+
+  void sync() {
+    state.syncPending = true;
+    if (!state.syncing) syncNow();
+  }
+
+  Future<void> _createStorage() async {
+    // create a storage
+    state.storage?.close();
+    state.storage = SerializableStore(state.notes);
+    // do a immediate sync
+    await syncNow();
+    if (state.syncError != null) {
+      state.storage = null;
+    }
+    // listen to storage
+    state.storage?.listener?.listen((event) {
+      log(event, name: '${state.storage.runtimeType}');
+      notify();
+      sync();
+    });
+  }
+
+  Future<bool> _checkDriveError(err) async {
+//    if (err is ApiRequestError) {
+//      try {
+//        await drive.refreshToken();
+//        return true;
+//      } catch (err) {
+//        return false;
+//      }
+//    }
+    return false;
   }
 
   Future<void> openBin(String plainPassword) async {
@@ -123,9 +140,15 @@ class StoreBloc extends Bloc<StoreEvent, StoreState> {
         state.binName,
         parent: drive.rootFolder,
       );
+
+      if (state.binFile != null) {
+        await _createStorage();
+      }
     } catch (err, stack) {
-      log('$err', stackTrace: stack, name: '$this');
-      state.passwordError = '$err';
+      if (!await _checkDriveError(err)) {
+        log('$err', stackTrace: stack, name: '$this');
+        state.passwordError = '$err';
+      }
     } finally {
       state.loading = false;
       notify();
@@ -141,8 +164,9 @@ class StoreBloc extends Bloc<StoreEvent, StoreState> {
 
       log('Generating password hash', name: '$this');
       final confirmedHash = Crypto.hashPassword(confirmedPassword);
-      if (confirmedHash != state.passwordHash) {
-        throw Exception('Confirmed password does not match');
+      if (!listEquals(confirmedHash, state.passwordHash)) {
+        state.passwordError = 'Confirmed password does not match';
+        return;
       }
 
       log('Create bin "${state.binName}"', name: '$this');
@@ -154,15 +178,12 @@ class StoreBloc extends Bloc<StoreEvent, StoreState> {
         throw Exception('No bin was created');
       }
 
-      state.storage?.close();
-      state.storage = SerializableStore(state.notes);
-      state.storage?.listener?.listen((event) => sync());
-
-      await syncNow();
-      state.passwordError = state.syncError;
+      await _createStorage();
     } catch (err, stack) {
-      log('$err', stackTrace: stack, name: '$this');
-      state.passwordError = '$err';
+      if (!await _checkDriveError(err)) {
+        log('$err', stackTrace: stack, name: '$this');
+        state.passwordError = '$err';
+      }
     } finally {
       state.loading = false;
       notify();
@@ -170,10 +191,14 @@ class StoreBloc extends Bloc<StoreEvent, StoreState> {
   }
 
   Future<void> syncNow() async {
+    if (state.binFile == null || state.storage == null) {
+      return clear();
+    }
     try {
-      log('Sync started', time: DateTime.now(), name: '$this');
+      log('Sync started ${DateTime.now()}', name: '$this');
       state.syncing = true;
       state.syncError = null;
+      state.syncPending = false;
       notify();
 
       // first try importing
@@ -181,6 +206,9 @@ class StoreBloc extends Bloc<StoreEvent, StoreState> {
         state.binName,
         parent: drive.rootFolder,
       );
+      if (state.binFile == null) {
+        throw Exception('No such bin found');
+      }
       if (state.binFile.md5Checksum != state.lastBinMd5) {
         final cipher = await drive.downloadFile(state.binFile);
         final plain = Crypto.decrypt(cipher, state.passwordHash);
@@ -198,21 +226,23 @@ class StoreBloc extends Bloc<StoreEvent, StoreState> {
         state.lastDataMd5 = checksum;
         state.dataVolumeSize = cipher.length;
       }
-      state.lastSync = DateTime.now().millisecondsSinceEpoch;
+
+      // set last successful sync time
+      state.lastSyncTime = DateTime.now().millisecondsSinceEpoch;
     } catch (err, stack) {
-      if (err is ApiRequestError) {
-        await drive.refreshToken();
-        state.syncPending = true;
-      } else {
+      if (!await _checkDriveError(err)) {
         log('$err', stackTrace: stack, name: '$this');
         state.syncError = '$err';
+      } else {
+        state.syncPending = true;
       }
     } finally {
-      log('Sync finished', time: DateTime.now(), name: '$this');
+      log('Sync finished ${DateTime.now()}', name: '$this');
       state.syncing = false;
-      notify();
       if (state.syncPending) {
-        sync();
+        syncNow();
+      } else {
+        notify();
       }
     }
   }
